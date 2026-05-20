@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body {
+  background-color: #0a051a !important;
+  color: white;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden; 
+  min-height: 100vh;
+}
+
+html {
+  scroll-behavior: smooth;
+  color-scheme: dark; 
+}
+
+::-webkit-scrollbar {
+  display: none;
+}
+
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
