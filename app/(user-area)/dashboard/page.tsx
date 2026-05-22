@@ -23,6 +23,21 @@ import {
 import { UserDashboardSkeleton } from '@/app/ui/skeletons';
 
 function DashboardContent() {
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const itemsPerPage = 5;
+
+  const totalPages = Math.ceil(
+    mapVesselData.length / itemsPerPage
+  );
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
+
+  const paginatedVessels = mapVesselData.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  );
+
   return (
     <div className="min-h-screen bg-[#0d0415] text-white p-6 font-mono">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
@@ -156,9 +171,15 @@ function DashboardContent() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-3 bg-[#1a0b2e] rounded-[2.5rem] border border-white/5 overflow-hidden shadow-2xl">
           <div className="p-8 flex justify-between items-center">
-            <h2 className="text-[13px] font-extrabold tracking-[0.25em] text-white uppercase italic">
-              Fleet Registry
-            </h2>
+            <div>
+              <h2 className="text-[13px] font-extrabold tracking-[0.25em] text-white uppercase italic">
+                Fleet Registry
+              </h2>
+
+              <p className="text-[9px] text-white/30 font-black uppercase tracking-widest mt-2">
+                Page {currentPage} / {totalPages}
+              </p>
+            </div>
 
             <div className="relative">
               <MagnifyingGlassIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
@@ -182,7 +203,7 @@ function DashboardContent() {
             </thead>
 
             <tbody className="divide-y divide-white/5">
-              {mapVesselData.map((v) => (
+              {paginatedVessels.map((v) => (
                 <tr
                   key={v.id}
                   className="hover:bg-[#bc66ff]/5 transition-all group cursor-pointer"
@@ -225,6 +246,34 @@ function DashboardContent() {
               ))}
             </tbody>
           </table>
+
+          <div className="flex justify-center gap-3 px-8 py-6 border-t border-white/5">
+            <button
+              onClick={() =>
+                setCurrentPage((prev) => Math.max(prev - 1, 1))
+              }
+              disabled={currentPage === 1}
+              className="px-5 py-2 rounded-full border border-white/10 text-[10px] uppercase font-black text-white/60 hover:border-[#bc66ff] hover:text-[#bc66ff] disabled:opacity-30 disabled:hover:border-white/10 disabled:hover:text-white/60 transition-all"
+            >
+              Prev
+            </button>
+
+            <div className="px-5 py-2 rounded-full bg-black/30 border border-white/10 text-[10px] uppercase tracking-widest text-white/60 font-black">
+              {currentPage} / {totalPages}
+            </div>
+
+            <button
+              onClick={() =>
+                setCurrentPage((prev) =>
+                  Math.min(prev + 1, totalPages)
+                )
+              }
+              disabled={currentPage === totalPages}
+              className="px-5 py-2 rounded-full border border-white/10 text-[10px] uppercase font-black text-white/60 hover:border-[#bc66ff] hover:text-[#bc66ff] disabled:opacity-30 disabled:hover:border-white/10 disabled:hover:text-white/60 transition-all"
+            >
+              Next
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-col gap-4">

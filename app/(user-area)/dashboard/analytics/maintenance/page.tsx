@@ -18,6 +18,10 @@ import { MaintenanceAnalyticsDetailSkeleton } from '@/app/ui/skeletons';
 import MaintenanceMetricCard from '@/components/analytics/MetricCard';
 
 function MaintenanceAnalyticsContent() {
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const itemsPerPage = 5;
+
   const totalVessels = maintenanceData.length;
 
   const criticalVessels = maintenanceData.filter(
@@ -33,6 +37,17 @@ function MaintenanceAnalyticsContent() {
           ) / totalVessels
         )
       : 0;
+
+  const totalPages = Math.ceil(
+    maintenanceData.length / itemsPerPage
+  );
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
+
+  const paginatedMaintenanceData = maintenanceData.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  );
 
   const statusSummary = [
     { label: 'ACTIVE', color: 'bg-[#bc66ff]' },
@@ -99,9 +114,15 @@ function MaintenanceAnalyticsContent() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         <div className="lg:col-span-8 bg-[#150e24]/40 border border-white/5 rounded-[2.5rem] overflow-hidden backdrop-blur-xl shadow-2xl">
           <div className="p-8 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
-            <h3 className="text-[12px] font-black uppercase tracking-widest text-white/60">
-              Vessel Maintenance Status
-            </h3>
+            <div>
+              <h3 className="text-[12px] font-black uppercase tracking-widest text-white/60">
+                Vessel Maintenance Status
+              </h3>
+
+              <p className="text-[9px] text-white/20 font-black uppercase tracking-widest mt-2">
+                Page {currentPage} / {totalPages}
+              </p>
+            </div>
 
             <span className="text-[9px] bg-[#bc66ff]/20 text-[#bc66ff] px-4 py-1.5 rounded-full font-black tracking-tighter border border-[#bc66ff]/30">
               LIVE_TRACKING
@@ -120,9 +141,9 @@ function MaintenanceAnalyticsContent() {
               </thead>
 
               <tbody className="divide-y divide-white/5">
-                {maintenanceData.map((ship, i) => (
+                {paginatedMaintenanceData.map((ship, i) => (
                   <tr
-                    key={i}
+                    key={`${ship.name}-${i}`}
                     className="hover:bg-white/[0.03] transition-all group"
                   >
                     <td className="px-8 py-6">
@@ -133,7 +154,7 @@ function MaintenanceAnalyticsContent() {
                       <p className="text-[9px] text-white/30 uppercase mt-1 tracking-tighter">
                         {ship.status === 'ACTIVE'
                           ? `Service: ${ship.nextService}`
-                          : ship.failure || 'Registry Ok'}
+                          : ship.failure || ship.hullInspect || 'Registry Ok'}
                       </p>
                     </td>
 
@@ -183,6 +204,34 @@ function MaintenanceAnalyticsContent() {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          <div className="flex justify-center gap-3 px-8 py-6 border-t border-white/5">
+            <button
+              onClick={() =>
+                setCurrentPage((prev) => Math.max(prev - 1, 1))
+              }
+              disabled={currentPage === 1}
+              className="px-5 py-2 rounded-full border border-white/10 text-[10px] uppercase font-black text-white/60 hover:border-[#bc66ff] hover:text-[#bc66ff] disabled:opacity-30 disabled:hover:border-white/10 disabled:hover:text-white/60 transition-all"
+            >
+              Prev
+            </button>
+
+            <div className="px-5 py-2 rounded-full bg-black/30 border border-white/10 text-[10px] uppercase tracking-widest text-white/60 font-black">
+              {currentPage} / {totalPages}
+            </div>
+
+            <button
+              onClick={() =>
+                setCurrentPage((prev) =>
+                  Math.min(prev + 1, totalPages)
+                )
+              }
+              disabled={currentPage === totalPages}
+              className="px-5 py-2 rounded-full border border-white/10 text-[10px] uppercase font-black text-white/60 hover:border-[#bc66ff] hover:text-[#bc66ff] disabled:opacity-30 disabled:hover:border-white/10 disabled:hover:text-white/60 transition-all"
+            >
+              Next
+            </button>
           </div>
         </div>
 
