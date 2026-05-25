@@ -1,8 +1,7 @@
-'use client';
-
 import Link from 'next/link';
-import { useState } from 'react';
-import { createShipmentTransaction } from '@/app/lib/actions';
+
+import { fetchShipmentTransactionById } from '@/app/lib/data';
+import { updateShipmentTransaction } from '@/app/lib/actions';
 
 const vehicles = [
   {
@@ -77,13 +76,21 @@ const vehicles = [
   },
 ];
 
-export default function CreateShipmentPage() {
-  const [selectedVehicleName, setSelectedVehicleName] = useState(
-    vehicles[0].name
+export default async function EditShipmentPage(props: {
+  params: Promise<{
+    id: string;
+  }>;
+}) {
+  const params = await props.params;
+  const shipment = await fetchShipmentTransactionById(params.id);
+
+  const updateShipmentWithId = updateShipmentTransaction.bind(
+    null,
+    params.id
   );
 
   const selectedVehicle =
-    vehicles.find((vehicle) => vehicle.name === selectedVehicleName) ||
+    vehicles.find((vehicle) => vehicle.name === shipment.vehicle_name) ||
     vehicles[0];
 
   return (
@@ -91,11 +98,11 @@ export default function CreateShipmentPage() {
       <div className="mb-8 flex items-start justify-between">
         <div>
           <h1 className="text-3xl font-black uppercase tracking-tighter">
-            Create Shipment
+            Edit Shipment
           </h1>
 
           <p className="text-[10px] text-[#bc66ff]/60 font-bold tracking-[0.3em] mt-1 uppercase">
-            Register new cargo transaction
+            Update cargo transaction data
           </p>
         </div>
 
@@ -108,7 +115,7 @@ export default function CreateShipmentPage() {
       </div>
 
       <form
-        action={createShipmentTransaction}
+        action={updateShipmentWithId}
         className="bg-[#150e24]/60 border border-white/5 rounded-[2.5rem] p-8 space-y-8"
       >
         <div>
@@ -117,18 +124,30 @@ export default function CreateShipmentPage() {
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <Input label="Shipping Date" name="shippingDate" type="date" />
+            <ReadOnlyInput
+              label="Tracking Number"
+              value={shipment.tracking_number}
+            />
+
+            <Input
+              label="Shipping Date"
+              name="shippingDate"
+              type="date"
+              defaultValue={String(shipment.shipping_date).slice(0, 10)}
+            />
 
             <Select
-              label="Shipping Type"
-              name="shippingType"
-              options={['Standard', 'Express', 'Priority']}
+                label="Shipping Type"
+                name="shippingType"
+                options={['Standard', 'Express', 'Priority']}
+                defaultValue={shipment.shipping_type}
             />
 
             <Select
               label="Shipment Status"
               name="shipmentStatus"
               options={['PENDING', 'ON ROUTE', 'ARRIVED', 'DELAYED']}
+              defaultValue={shipment.shipment_status}
             />
           </div>
         </div>
@@ -139,11 +158,35 @@ export default function CreateShipmentPage() {
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <Input label="Sender Name" name="senderName" />
-            <Input label="Receiver Name" name="receiverName" />
-            <Input label="Phone Number" name="phoneNumber" />
-            <Input label="Origin City" name="originCity" />
-            <Input label="Destination City" name="destinationCity" />
+            <Input
+              label="Sender Name"
+              name="senderName"
+              defaultValue={shipment.sender_name}
+            />
+
+            <Input
+              label="Receiver Name"
+              name="receiverName"
+              defaultValue={shipment.receiver_name}
+            />
+
+            <Input
+              label="Phone Number"
+              name="phoneNumber"
+              defaultValue={shipment.phone_number}
+            />
+
+            <Input
+              label="Origin City"
+              name="originCity"
+              defaultValue={shipment.origin_city}
+            />
+
+            <Input
+              label="Destination City"
+              name="destinationCity"
+              defaultValue={shipment.destination_city}
+            />
           </div>
         </div>
 
@@ -153,10 +196,31 @@ export default function CreateShipmentPage() {
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <Input label="Item Name" name="itemName" />
-            <Input label="Item Type" name="itemType" />
-            <Input label="Item Weight (KG)" name="itemWeight" type="number" />
-            <Input label="Price / Rate" name="price" type="number" />
+            <Input
+              label="Item Name"
+              name="itemName"
+              defaultValue={shipment.item_name}
+            />
+
+            <Input
+              label="Item Type"
+              name="itemType"
+              defaultValue={shipment.item_type}
+            />
+
+            <Input
+              label="Item Weight (KG)"
+              name="itemWeight"
+              type="number"
+              defaultValue={String(shipment.item_weight)}
+            />
+
+            <Input
+              label="Price / Rate"
+              name="price"
+              type="number"
+              defaultValue={String(shipment.price)}
+            />
           </div>
         </div>
 
@@ -165,9 +229,21 @@ export default function CreateShipmentPage() {
             Vehicle Detail
           </h2>
 
-          <input type="hidden" name="vehicleName" value={selectedVehicle.name} />
-          <input type="hidden" name="vehicleType" value={selectedVehicle.type} />
-          <input type="hidden" name="vehicleCode" value={selectedVehicle.code} />
+          <input
+            type="hidden"
+            name="vehicleName"
+            value={selectedVehicle.name}
+          />
+          <input
+            type="hidden"
+            name="vehicleType"
+            value={selectedVehicle.type}
+          />
+          <input
+            type="hidden"
+            name="vehicleCode"
+            value={selectedVehicle.code}
+          />
           <input
             type="hidden"
             name="vehicleCapacity"
@@ -180,36 +256,26 @@ export default function CreateShipmentPage() {
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div>
-              <label className="block text-[9px] text-white/40 font-black uppercase tracking-[0.25em] mb-3">
-                Vehicle Name
-              </label>
+            <ReadOnlyInput
+              label="Vehicle Name"
+              value={selectedVehicle.name}
+            />
 
-              <select
-                value={selectedVehicleName}
-                onChange={(event) =>
-                  setSelectedVehicleName(event.target.value)
-                }
-                className="w-full bg-black/30 border border-white/10 rounded-2xl px-5 py-4 text-sm outline-none focus:border-[#bc66ff]/60"
-              >
-                {vehicles.map((vehicle) => (
-                  <option
-                    key={vehicle.name}
-                    value={vehicle.name}
-                    className="bg-[#150e24]"
-                  >
-                    {vehicle.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <ReadOnlyInput
+              label="Vehicle Type"
+              value={selectedVehicle.type}
+            />
 
-            <ReadOnlyInput label="Vehicle Type" value={selectedVehicle.type} />
-            <ReadOnlyInput label="Vehicle Code" value={selectedVehicle.code} />
+            <ReadOnlyInput
+              label="Vehicle Code"
+              value={selectedVehicle.code}
+            />
+
             <ReadOnlyInput
               label="Vehicle Capacity"
               value={selectedVehicle.capacity}
             />
+
             <ReadOnlyInput
               label="Vehicle Status"
               value={selectedVehicle.status}
@@ -225,6 +291,7 @@ export default function CreateShipmentPage() {
           <textarea
             name="notes"
             rows={4}
+            defaultValue={shipment.notes || ''}
             className="w-full bg-black/30 border border-white/10 rounded-2xl px-5 py-4 text-sm outline-none focus:border-[#bc66ff]/60"
             placeholder="Add shipment notes..."
           />
@@ -242,7 +309,7 @@ export default function CreateShipmentPage() {
             type="submit"
             className="bg-[#bc66ff] text-black px-8 py-4 rounded-full text-[9px] font-black uppercase tracking-[0.2em] hover:bg-white transition-all"
           >
-            Save Shipment
+            Update Shipment
           </button>
         </div>
       </form>
@@ -254,10 +321,12 @@ function Input({
   label,
   name,
   type = 'text',
+  defaultValue,
 }: {
   label: string;
   name: string;
   type?: string;
+  defaultValue?: string;
 }) {
   return (
     <div>
@@ -269,6 +338,7 @@ function Input({
         required
         name={name}
         type={type}
+        defaultValue={defaultValue}
         className="w-full bg-black/30 border border-white/10 rounded-2xl px-5 py-4 text-sm outline-none focus:border-[#bc66ff]/60"
       />
     </div>
@@ -279,10 +349,12 @@ function Select({
   label,
   name,
   options,
+  defaultValue,
 }: {
   label: string;
   name: string;
   options: string[];
+  defaultValue?: string;
 }) {
   return (
     <div>
@@ -293,6 +365,7 @@ function Select({
       <select
         required
         name={name}
+        defaultValue={defaultValue}
         className="w-full bg-black/30 border border-white/10 rounded-2xl px-5 py-4 text-sm outline-none focus:border-[#bc66ff]/60"
       >
         <option value="">Select option</option>
