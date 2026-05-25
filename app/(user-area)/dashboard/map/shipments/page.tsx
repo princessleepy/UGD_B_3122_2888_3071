@@ -1,4 +1,6 @@
 import Link from 'next/link';
+//agar tidak ada chace
+export const dynamic = 'force-dynamic';
 
 import {
   fetchFilteredShipmentTransactions,
