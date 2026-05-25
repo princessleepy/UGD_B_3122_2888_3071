@@ -86,3 +86,32 @@ export type InvoiceForm = {
   amount: number;
   status: 'pending' | 'paid';
 };
+
+export type ShipmentTransaction = {
+  id: string;
+  tracking_number: string;
+  shipping_date: string;
+  sender_name: string;
+  receiver_name: string;
+  phone_number: string;
+  origin_city: string;
+  destination_city: string;
+  item_name: string;
+  item_type: string;
+  item_weight: number;
+  price: number;
+  vehicle_name: string;
+  vehicle_type: string;
+  vehicle_code: string;
+  vehicle_capacity: string;
+  vehicle_status: string;
+  shipping_type: string;
+  shipment_status: string;
+  notes: string | null;
+  created_at: string;
+};
+
+export type ShipmentTransactionForm = Omit<
+  ShipmentTransaction,
+  'created_at'
+>;

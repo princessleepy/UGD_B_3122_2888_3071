@@ -6,6 +6,8 @@ import {
   InvoicesTable,
   LatestInvoiceRaw,
   Revenue,
+  ShipmentTransaction,
+  ShipmentTransactionForm,
 } from './definitions';
 import { formatCurrency } from './utils';
 
@@ -214,5 +216,117 @@ export async function fetchFilteredCustomers(query: string) {
   } catch (err) {
     console.error('Database Error:', err);
     throw new Error('Failed to fetch customer table.');
+  }
+}
+
+const SHIPMENTS_PER_PAGE = 5;
+
+export async function fetchFilteredShipmentTransactions(
+  query: string,
+  currentPage: number,
+) {
+  const offset = (currentPage - 1) * SHIPMENTS_PER_PAGE;
+
+  try {
+    const shipments = await sql<ShipmentTransaction[]>`
+      SELECT
+        id,
+        tracking_number,
+        shipping_date,
+        sender_name,
+        receiver_name,
+        phone_number,
+        origin_city,
+        destination_city,
+        item_name,
+        item_type,
+        item_weight,
+        price,
+        vehicle_name,
+        vehicle_type,
+        vehicle_code,
+        vehicle_capacity,
+        vehicle_status,
+        shipping_type,
+        shipment_status,
+        notes,
+        created_at
+      FROM shipment_transactions
+      WHERE
+        tracking_number ILIKE ${`%${query}%`} OR
+        sender_name ILIKE ${`%${query}%`} OR
+        receiver_name ILIKE ${`%${query}%`} OR
+        item_name ILIKE ${`%${query}%`} OR
+        item_type ILIKE ${`%${query}%`} OR
+        origin_city ILIKE ${`%${query}%`} OR
+        destination_city ILIKE ${`%${query}%`} OR
+        shipment_status ILIKE ${`%${query}%`}
+      ORDER BY created_at DESC
+      LIMIT ${SHIPMENTS_PER_PAGE} OFFSET ${offset}
+    `;
+
+    return shipments;
+  } catch (error) {
+    console.error('Database Error:', error);
+    throw new Error('Failed to fetch shipment transactions.');
+  }
+}
+
+export async function fetchShipmentTransactionPages(query: string) {
+  try {
+    const data = await sql`
+      SELECT COUNT(*)
+      FROM shipment_transactions
+      WHERE
+        tracking_number ILIKE ${`%${query}%`} OR
+        sender_name ILIKE ${`%${query}%`} OR
+        receiver_name ILIKE ${`%${query}%`} OR
+        item_name ILIKE ${`%${query}%`} OR
+        item_type ILIKE ${`%${query}%`} OR
+        origin_city ILIKE ${`%${query}%`} OR
+        destination_city ILIKE ${`%${query}%`} OR
+        shipment_status ILIKE ${`%${query}%`}
+    `;
+
+    return Math.ceil(Number(data[0].count) / SHIPMENTS_PER_PAGE);
+  } catch (error) {
+    console.error('Database Error:', error);
+    throw new Error('Failed to fetch shipment pages.');
+  }
+}
+
+//tambahan
+export async function fetchShipmentTransactionById(id: string) {
+  try {
+    const data = await sql<ShipmentTransactionForm[]>`
+      SELECT
+        id,
+        tracking_number,
+        shipping_date,
+        sender_name,
+        receiver_name,
+        phone_number,
+        origin_city,
+        destination_city,
+        item_name,
+        item_type,
+        item_weight,
+        price,
+        vehicle_name,
+        vehicle_type,
+        vehicle_code,
+        vehicle_capacity,
+        vehicle_status,
+        shipping_type,
+        shipment_status,
+        notes
+      FROM shipment_transactions
+      WHERE id = ${id}
+    `;
+
+    return data[0];
+  } catch (error) {
+    console.error('Database Error:', error);
+    throw new Error('Failed to fetch shipment transaction.');
   }
 }
