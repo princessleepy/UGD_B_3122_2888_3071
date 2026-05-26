@@ -773,3 +773,75 @@ export function UserDashboardSkeleton() {
     </div>
   );
 }
+
+//admin
+export function StatsSkeleton() {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      {[1, 2, 3, 4].map((item) => (
+        <div
+          key={item}
+          className="h-[194px] bg-[#1a0b2e]/80 rounded-[20px] border border-white/5 animate-pulse"
+        >
+          <div className="p-6 space-y-6">
+            <div className="w-10 h-10 rounded-xl bg-[#d095ff]/10" />
+            <div className="space-y-3">
+              <div className="h-3 w-28 rounded bg-[#2a1642]" />
+              <div className="h-7 w-12 rounded bg-[#2a1642]" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function ActivitySkeleton() {
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="lg:col-span-2 bg-[#1a0b2e]/80 p-6 rounded-[24px] border border-white/5 animate-pulse">
+        <div className="h-4 w-48 rounded bg-[#2a1642] mb-8" />
+
+        <div className="space-y-6">
+          {[1, 2, 3, 4, 5].map((item) => (
+            <div key={item} className="flex items-start gap-4">
+              <div className="w-2 h-2 mt-2 rounded-full bg-[#d095ff]/50" />
+
+              <div className="space-y-2 flex-1">
+                <div className="h-3 w-64 rounded bg-[#2a1642]" />
+                <div className="h-2 w-40 rounded bg-[#2a1642]" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-[#1a0b2e]/80 p-6 rounded-[24px] border border-white/5 animate-pulse">
+        <div className="h-4 w-48 rounded bg-[#2a1642] mb-8" />
+
+        <div className="space-y-5">
+          {[1, 2, 3].map((item) => (
+            <div key={item} className="flex justify-between">
+              <div className="h-3 w-28 rounded bg-[#2a1642]" />
+              <div className="h-3 w-20 rounded bg-[#2a1642]" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function AdminDashboardSkeleton() {
+  return (
+    <div className="min-h-screen bg-[#0d0415] text-white p-6 font-mono">
+      <div className="mb-8 space-y-3 animate-pulse">
+        <div className="h-7 w-64 rounded bg-[#1a0b2e]" />
+        <div className="h-3 w-72 rounded bg-[#1a0b2e]" />
+      </div>
+
+      <StatsSkeleton />
+      <ActivitySkeleton />
+    </div>
+  );
+}

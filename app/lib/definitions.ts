@@ -115,3 +115,19 @@ export type ShipmentTransactionForm = Omit<
   ShipmentTransaction,
   'created_at'
 >;
+
+//vehicle
+export type Vehicle = {
+  id: string;
+  vehicle_code: string;
+  vehicle_name: string;
+  vehicle_type: string;
+  capacity: string;
+  status: string;
+  status_color: string;
+  registry_status: string;
+  hull_integrity: string;
+  created_at: string;
+};
+
+export type VehicleForm = Omit<Vehicle, 'created_at'>;

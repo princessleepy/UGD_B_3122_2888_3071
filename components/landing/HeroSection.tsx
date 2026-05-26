@@ -17,7 +17,7 @@ export default function HeroSection() {
       <main className="relative z-10 flex flex-col items-center justify-center text-center px-4 h-screen">
         <div className="mb-8 text-[#bc66ff] drop-shadow-[0_0_20px_rgba(188,102,255,0.6)]">
           <Image 
-            src={MyLogo} 
+            src="/logo no bg.png"
             alt="Samudra Tech Logo"
             width={140}   
             height={140} 

@@ -8,6 +8,8 @@ import {
   Revenue,
   ShipmentTransaction,
   ShipmentTransactionForm,
+  Vehicle,
+  VehicleForm,
 } from './definitions';
 import { formatCurrency } from './utils';
 
@@ -328,5 +330,98 @@ export async function fetchShipmentTransactionById(id: string) {
   } catch (error) {
     console.error('Database Error:', error);
     throw new Error('Failed to fetch shipment transaction.');
+  }
+}
+
+const VEHICLES_PER_PAGE = 6;
+
+export async function fetchFilteredVehicles(
+  query: string,
+  status: string,
+  currentPage: number,
+) {
+  const offset = (currentPage - 1) * VEHICLES_PER_PAGE;
+
+  try {
+    const vehicles = await sql<Vehicle[]>`
+      SELECT
+        id,
+        vehicle_code,
+        vehicle_name,
+        vehicle_type,
+        capacity,
+        status,
+        status_color,
+        registry_status,
+        hull_integrity,
+        created_at
+      FROM vehicles
+      WHERE
+        (
+          vehicle_code ILIKE ${`%${query}%`} OR
+          vehicle_name ILIKE ${`%${query}%`} OR
+          vehicle_type ILIKE ${`%${query}%`} OR
+          capacity ILIKE ${`%${query}%`}
+        )
+        AND (
+          ${status} = 'ALL' OR status = ${status}
+        )
+      ORDER BY created_at DESC
+      LIMIT ${VEHICLES_PER_PAGE} OFFSET ${offset}
+    `;
+
+    return vehicles;
+  } catch (error) {
+    console.error('Database Error:', error);
+    throw new Error('Failed to fetch vehicles.');
+  }
+}
+
+export async function fetchVehiclePages(query: string, status: string) {
+  try {
+    const data = await sql`
+      SELECT COUNT(*)
+      FROM vehicles
+      WHERE
+        (
+          vehicle_code ILIKE ${`%${query}%`} OR
+          vehicle_name ILIKE ${`%${query}%`} OR
+          vehicle_type ILIKE ${`%${query}%`} OR
+          capacity ILIKE ${`%${query}%`}
+        )
+        AND (
+          ${status} = 'ALL' OR status = ${status}
+        )
+    `;
+
+    return Math.ceil(Number(data[0].count) / VEHICLES_PER_PAGE);
+  } catch (error) {
+    console.error('Database Error:', error);
+    throw new Error('Failed to fetch vehicle pages.');
+  }
+}
+
+//vehicle
+export async function fetchVehicleById(id: string) {
+  try {
+    const data = await sql<VehicleForm[]>`
+      SELECT
+        id,
+        vehicle_code,
+        vehicle_name,
+        vehicle_type,
+        capacity,
+        status,
+        status_color,
+        registry_status,
+        hull_integrity
+      FROM vehicles
+      WHERE id = ${id}
+    `;
+
+    return data[0];
+  } catch (error) {
+    console.error('Database Error:', error);
+    throw new Error('Failed to fetch vehicle.');
   }
 }

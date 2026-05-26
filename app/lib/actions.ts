@@ -170,3 +170,105 @@ export async function deleteShipmentTransaction(id: string) {
 
   revalidatePath('/dashboard/map/shipments');
 }
+
+//vehicle
+const VehicleSchema = z.object({
+  vehicleCode: z.string().min(1),
+  vehicleName: z.string().min(1),
+  vehicleType: z.string().min(1),
+  capacity: z.string().min(1),
+  status: z.string().min(1),
+  registryStatus: z.string().optional(),
+  hullIntegrity: z.string().optional(),
+});
+
+function getVehicleStatusColor(status: string) {
+  switch (status) {
+    case 'EN ROUTE':
+      return 'text-emerald-500';
+    case 'MAINTENANCE':
+      return 'text-rose-500';
+    case 'IN PORT':
+      return 'text-indigo-500';
+    case 'ANCHORAGE':
+      return 'text-amber-500';
+    default:
+      return 'text-gray-400';
+  }
+}
+
+export async function createVehicle(formData: FormData) {
+  const validatedFields = VehicleSchema.parse({
+    vehicleCode: formData.get('vehicleCode'),
+    vehicleName: formData.get('vehicleName'),
+    vehicleType: formData.get('vehicleType'),
+    capacity: formData.get('capacity'),
+    status: formData.get('status'),
+    registryStatus: formData.get('registryStatus'),
+    hullIntegrity: formData.get('hullIntegrity'),
+  });
+
+  await sql`
+    INSERT INTO vehicles (
+      vehicle_code,
+      vehicle_name,
+      vehicle_type,
+      capacity,
+      status,
+      status_color,
+      registry_status,
+      hull_integrity
+    )
+    VALUES (
+      ${validatedFields.vehicleCode},
+      ${validatedFields.vehicleName},
+      ${validatedFields.vehicleType},
+      ${validatedFields.capacity},
+      ${validatedFields.status},
+      ${getVehicleStatusColor(validatedFields.status)},
+      ${validatedFields.registryStatus || '2026-ACTIVE'},
+      ${validatedFields.hullIntegrity || 'OPTIMAL'}
+    )
+  `;
+
+  revalidatePath('/dashboard/fleet/vessels');
+  redirect('/dashboard/fleet/vessels');
+}
+
+export async function updateVehicle(id: string, formData: FormData) {
+  const validatedFields = VehicleSchema.parse({
+    vehicleCode: formData.get('vehicleCode'),
+    vehicleName: formData.get('vehicleName'),
+    vehicleType: formData.get('vehicleType'),
+    capacity: formData.get('capacity'),
+    status: formData.get('status'),
+    registryStatus: formData.get('registryStatus'),
+    hullIntegrity: formData.get('hullIntegrity'),
+  });
+
+  await sql`
+    UPDATE vehicles
+    SET
+      vehicle_code = ${validatedFields.vehicleCode},
+      vehicle_name = ${validatedFields.vehicleName},
+      vehicle_type = ${validatedFields.vehicleType},
+      capacity = ${validatedFields.capacity},
+      status = ${validatedFields.status},
+      status_color = ${getVehicleStatusColor(validatedFields.status)},
+      registry_status = ${validatedFields.registryStatus || '2026-ACTIVE'},
+      hull_integrity = ${validatedFields.hullIntegrity || 'OPTIMAL'}
+    WHERE id = ${id}
+  `;
+
+  revalidatePath('/dashboard/fleet/vessels');
+  redirect('/dashboard/fleet/vessels');
+}
+
+export async function deleteVehicle(id: string) {
+  await sql`
+    DELETE FROM vehicles
+    WHERE id = ${id}
+  `;
+
+  revalidatePath('/dashboard/fleet/vessels');
+}

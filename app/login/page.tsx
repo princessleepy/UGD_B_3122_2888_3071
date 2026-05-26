@@ -69,17 +69,16 @@ export default function LoginPage() {
         </div>
 
         <div className="w-full bg-black/40 backdrop-blur-3xl border border-white/10 rounded-[2rem] p-8 md:p-10 shadow-[0_40px_80px_rgba(0,0,0,0.7)] ring-1 ring-white/5">
-          
           <div className="flex items-center gap-4 mb-10">
-            <div className="bg-white p-2 rounded-xl shadow-2xl">
+            <div className="bg-white rounded-xl shadow-xl overflow-hidden w-14 h-14 flex items-center justify-center">
               <img 
-                src="/logo.png" 
+                src="/samudratech logo.jpeg" 
                 alt="Logo" 
-                className="w-12 h-12 object-contain"
+                className="w-full h-full object-cover scale-100"
               />
             </div>
             <div className="flex flex-col">
-              <span className="text-white font-bold text-xl uppercase leading-none tracking-tighter">AQUALYNX</span>
+              <span className="text-white font-bold text-xl uppercase leading-none tracking-tighter">SAMUDRA TECHNOLOGY NUSANTARA</span>
               <span className="text-purple-400 text-[10px] font-medium tracking-[0.15em] mt-1 uppercase opacity-90">Maritime Analytics</span>
             </div>
           </div>
