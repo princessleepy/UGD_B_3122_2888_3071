@@ -425,3 +425,28 @@ export async function fetchVehicleById(id: string) {
     throw new Error('Failed to fetch vehicle.');
   }
 }
+
+//dashboard
+export async function fetchAllVehicles() {
+  try {
+    const vehicles = await sql<Vehicle[]>`
+      SELECT
+        id,
+        vehicle_code,
+        vehicle_name,
+        vehicle_type,
+        capacity,
+        status,
+        status_color,
+        registry_status,
+        hull_integrity,
+        created_at
+      FROM vehicles
+      ORDER BY created_at DESC
+    `;
+    return vehicles;
+  } catch (error) {
+    console.error('Database Error:', error);
+    throw new Error('Failed to fetch all vehicles.');
+  }
+}
