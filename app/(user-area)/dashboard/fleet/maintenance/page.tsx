@@ -1,200 +1,144 @@
 'use client';
 
-import React, {
-  useEffect,
-  useState,
-  Suspense,
-} from 'react';
-
+import React, { useState, Suspense } from 'react';
 import { maintenanceData as rawData } from '@/app/lib/placeholder-data';
 import { UserDashboardSkeleton } from '@/app/ui/skeletons';
 
-interface MaintenanceItem {
-  name: string;
-  progress: number;
-  status: string;
-  eta: string;
+type ScheduleStatus = "PLANNED" | "IN_PROGRESS" | "DONE";
+
+interface ScheduleItem {
+  id: string;
+  vesselName: string;
+  task: string;
+  date: string;
+  status: ScheduleStatus;
 }
 
+interface MaintenanceItem {
+  id: string;
+  name: string;
+  health: number;
+  issueType: string;
+}
+
+const taskOptions = ["Engine Oil Change", "Propeller Check", "Hull Cleaning", "Engine Overhaul", "Electrical Repair"];
+
 function MaintenanceContent() {
+  const [maintenanceData] = useState<MaintenanceItem[]>(
+    rawData.map((item, index) => ({
+      id: index.toString(),
+      name: item.name,
+      health: Math.floor(Math.random() * 50) + 20, // Start lower to show warning
+      issueType: taskOptions[Math.floor(Math.random() * taskOptions.length)]
+    }))
+  );
+
+  const [schedules, setSchedules] = useState<ScheduleItem[]>([]);
+  const [formData, setFormData] = useState({ id: '', vesselName: '', task: '', date: '', status: 'PLANNED' as ScheduleStatus });
+  const [isEditing, setIsEditing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 3;
 
-  const maintenanceData = rawData as MaintenanceItem[];
+  const paginatedData = maintenanceData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const totalPages = Math.ceil(maintenanceData.length / itemsPerPage);
 
-  const itemsPerPage = 5;
-
-  const totalPages = Math.ceil(
-    maintenanceData.length / itemsPerPage
-  );
-
-  const startIndex = (currentPage - 1) * itemsPerPage;
-
-  const paginatedMaintenanceData = maintenanceData.slice(
-    startIndex,
-    startIndex + itemsPerPage
-  );
-
-  const criticalCount = maintenanceData.filter(
-    (m) => m.status === 'CRITICAL'
-  ).length;
-
-  const activeCount = maintenanceData.filter(
-    (m) => m.status !== 'IDLE'
-  ).length;
-
-  const avgProgress =
-    maintenanceData.length > 0
-      ? Math.round(
-          maintenanceData.reduce((a, b) => a + b.progress, 0) /
-            maintenanceData.length
-        )
-      : 0;
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isEditing) {
+      setSchedules(schedules.map(s => s.id === formData.id ? formData : s));
+    } else {
+      setSchedules([...schedules, { ...formData, id: Date.now().toString() }]);
+    }
+    setFormData({ id: '', vesselName: '', task: '', date: '', status: 'PLANNED' });
+    setIsEditing(false);
+  };
 
   return (
-    <div className="min-h-screen bg-[#0a0514] text-white font-mono p-8 pt-4 space-y-8">
-      {/* HEADER */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-black uppercase tracking-tighter">
-            Maintenance Hub
-          </h1>
-
-          <p className="text-[10px] text-[#bc66ff]/60 font-bold tracking-[0.3em] mt-1">
-            AQUALYNX SYSTEMS - ENGINEERING DIV.
-          </p>
-        </div>
-
-        <div className="px-5 py-2.5 rounded-full border border-white/5 bg-[#150e24]">
-          <span className="text-[10px] uppercase font-bold">
-            System Status:{' '}
-            {criticalCount > 0 ? 'Action Required' : 'Optimal'}
-          </span>
-        </div>
-      </div>
-
-      {/* STATS */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-[#150e24] p-6 rounded-3xl border border-white/5">
-          <p className="text-[8px] text-gray-500 uppercase">
-            Active Service
-          </p>
-
-          <p className="text-4xl font-black">{activeCount}</p>
-        </div>
-
-        <div className="bg-[#150e24] p-6 rounded-3xl border border-white/5">
-          <p className="text-[8px] text-gray-500 uppercase">
-            Total Fleet
-          </p>
-
-          <p className="text-4xl font-black text-[#bc66ff]">
-            {maintenanceData.length}
-          </p>
-        </div>
-
-        <div className="bg-[#150e24] p-6 rounded-3xl border border-white/5">
-          <p className="text-[8px] text-gray-500 uppercase">
-            Fleet Health
-          </p>
-
-          <p className="text-4xl font-black">{avgProgress}%</p>
-        </div>
-
-        <div className="bg-[#150e24] p-6 rounded-3xl border border-white/5">
-          <p className="text-[8px] text-gray-500 uppercase">
-            Critical
-          </p>
-
-          <p className="text-4xl font-black text-rose-500">
-            {criticalCount}
-          </p>
-        </div>
-      </div>
-
-      {/* MAIN */}
-      <div className="grid grid-cols-12 gap-8">
-        {/* LEFT */}
-        <div className="col-span-12 lg:col-span-8 bg-[#150e24] rounded-[2.5rem] p-8 border border-white/5">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-[10px] uppercase text-gray-500">
-              Live Maintenance Progress
-            </h2>
-
-            <span className="text-[9px] text-white/30 font-black uppercase tracking-widest">
-              Page {currentPage} / {totalPages}
-            </span>
+    <div className="min-h-screen bg-[#0a0514] text-white font-mono p-12 space-y-12">
+      
+      {/* 4 STATS CARDS */}
+      <div className="grid grid-cols-4 gap-4">
+        {[
+            {l: 'FLEET HEALTH', v: '92%'}, 
+            {l: 'ACTIVE', v: schedules.filter(s => s.status === 'IN_PROGRESS').length}, 
+            {l: 'PLANNED', v: schedules.filter(s => s.status === 'PLANNED').length}, 
+            {l: 'COMPLETED', v: schedules.filter(s => s.status === 'DONE').length}
+        ].map((s, i) => (
+          <div key={i} className="bg-[#150e24] p-4 rounded-xl border border-white/10">
+            <p className="text-[8px] text-gray-500 tracking-wider">{s.l}</p>
+            <p className="text-lg font-bold mt-1">{s.v}</p>
           </div>
+        ))}
+      </div>
 
-          <div className="space-y-6">
-            {paginatedMaintenanceData.map((m, i) => (
-              <div key={`${m.name}-${i}`} className="space-y-2">
-                <div className="flex justify-between">
-                  <p className="text-[11px] font-black uppercase">
-                    {m.name}
+      <div className="grid grid-cols-12 gap-12">
+        
+        {/* MONITORING LIST */}
+        <div className="col-span-7 bg-[#150e24] rounded-[3rem] p-10 border border-white/10 space-y-6">
+          <h2 className="text-[12px] uppercase text-gray-400 tracking-widest mb-6">Fleet Health Monitoring</h2>
+          {paginatedData.map(m => {
+            const active = schedules.find(s => s.vesselName.toLowerCase() === m.name.toLowerCase());
+            // LOGIC OTOMATIS: Done = 100% Health
+            const currentHealth = active?.status === 'DONE' ? 100 : m.health;
+
+            return (
+              <div key={m.id} className="p-6 rounded-3xl bg-white/5 border border-white/5 space-y-4">
+                <div className="flex justify-between text-[11px] uppercase font-bold">
+                  <p>
+                    {m.name} 
+                    {currentHealth < 50 && <span className="text-rose-500 ml-2">({m.issueType})</span>}
+                    {active && <span className="ml-4 px-3 py-1 bg-purple-500/20 text-purple-400 rounded-lg border border-purple-500/30">{active.status}</span>}
                   </p>
-
-                  <p className="text-[9px] text-gray-500">
-                    {m.progress}%
+                  <p className={currentHealth === 100 ? "text-blue-400" : "text-green-500"}>
+                    {currentHealth}% Health
                   </p>
                 </div>
-
-                <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full ${
-                      m.status === 'CRITICAL'
-                        ? 'bg-rose-500'
-                        : 'bg-[#bc66ff]'
-                    }`}
-                    style={{ width: `${m.progress}%` }}
+                <div className="h-3 bg-white/10 rounded-full overflow-hidden">
+                  <div 
+                    className={`h-full transition-all duration-500 ${currentHealth === 100 ? 'bg-blue-500' : 'bg-green-500'}`} 
+                    style={{ width: `${currentHealth}%` }} 
                   />
                 </div>
+              </div>
+            );
+          })}
+          
+          <div className="flex justify-center gap-6 pt-6 border-t border-white/10">
+            <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="text-[11px] hover:text-[#bc66ff]">Prev</button>
+            <span className="text-[11px] text-gray-500">{currentPage} / {totalPages}</span>
+            <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="text-[11px] hover:text-[#bc66ff]">Next</button>
+          </div>
+        </div>
 
-                <div className="flex justify-between text-[8px] text-gray-600 uppercase">
-                  <span>{m.eta}</span>
-                  <span>{m.status}</span>
+        {/* SCHEDULER FORM */}
+        <div className="col-span-5 bg-[#150e24] rounded-[3rem] p-10 border border-white/10 space-y-6">
+          <h2 className="text-[12px] uppercase text-gray-400 tracking-widest">Service Scheduler</h2>
+          <form onSubmit={handleSave} className="space-y-4">
+            <input className="w-full bg-black/40 p-4 rounded-xl text-sm border border-white/10" placeholder="Vessel Name" value={formData.vesselName} onChange={e => setFormData({...formData, vesselName: e.target.value})} />
+            <select className="w-full bg-black/40 p-4 rounded-xl text-sm border border-white/10" value={formData.task} onChange={e => setFormData({...formData, task: e.target.value})}>
+              <option value="">Select Task</option>
+              {taskOptions.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+            <select className="w-full bg-black/40 p-4 rounded-xl text-sm border border-white/10" value={formData.status} onChange={e => setFormData({...formData, status: e.target.value as ScheduleStatus})}>
+              <option value="PLANNED">PLANNED</option>
+              <option value="IN_PROGRESS">IN_PROGRESS</option>
+              <option value="DONE">DONE</option>
+            </select>
+            <input type="date" className="w-full bg-black/40 p-4 rounded-xl text-sm border border-white/10" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
+            <button className="w-full bg-[#bc66ff] text-black py-4 rounded-xl font-black text-[11px] uppercase tracking-widest">{isEditing ? 'Update' : 'Save'}</button>
+          </form>
+
+          <div className="mt-8 space-y-3 max-h-[300px] overflow-y-auto">
+            {schedules.map(s => (
+              <div key={s.id} className="p-5 bg-white/5 rounded-2xl text-[10px] flex justify-between items-center border border-white/5">
+                <div><p className="font-bold text-xs">{s.vesselName}</p><p className="text-gray-400">{s.task} • {s.date} • {s.status}</p></div>
+                <div className="flex gap-4">
+                  <button onClick={() => { setFormData(s); setIsEditing(true); }} className="text-blue-400">Edit</button>
+                  <button onClick={() => setSchedules(schedules.filter(item => item.id !== s.id))} className="text-rose-500">Del</button>
                 </div>
               </div>
             ))}
           </div>
-
-          <div className="flex justify-center gap-3 pt-8 border-t border-white/5 mt-8">
-            <button
-              onClick={() =>
-                setCurrentPage((prev) => Math.max(prev - 1, 1))
-              }
-              disabled={currentPage === 1}
-              className="px-5 py-2 rounded-full border border-white/10 text-[10px] uppercase font-black text-white/60 hover:border-[#bc66ff] hover:text-[#bc66ff] disabled:opacity-30 disabled:hover:border-white/10 disabled:hover:text-white/60 transition-all"
-            >
-              Prev
-            </button>
-
-            <div className="px-5 py-2 rounded-full bg-black/30 border border-white/10 text-[10px] uppercase tracking-widest text-white/60 font-black">
-              {currentPage} / {totalPages}
-            </div>
-
-            <button
-              onClick={() =>
-                setCurrentPage((prev) =>
-                  Math.min(prev + 1, totalPages)
-                )
-              }
-              disabled={currentPage === totalPages}
-              className="px-5 py-2 rounded-full border border-white/10 text-[10px] uppercase font-black text-white/60 hover:border-[#bc66ff] hover:text-[#bc66ff] disabled:opacity-30 disabled:hover:border-white/10 disabled:hover:text-white/60 transition-all"
-            >
-              Next
-            </button>
-          </div>
-        </div>
-
-        {/* RIGHT */}
-        <div className="col-span-12 lg:col-span-4 bg-[#150e24] rounded-[2.5rem] p-8 border border-white/5">
-          <h2 className="text-[10px] uppercase text-gray-500">
-            Inventory
-          </h2>
-
-          <button className="mt-8 w-full bg-[#bc66ff] text-black py-4 rounded-2xl font-black text-[9px] uppercase">
-            Restock Inventory
-          </button>
         </div>
       </div>
     </div>
@@ -202,19 +146,5 @@ function MaintenanceContent() {
 }
 
 export default function MaintenancePage() {
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setLoading(false);
-    }, 1000);
-
-    return () => window.clearTimeout(timer);
-  }, []);
-
-  return (
-    <Suspense fallback={<UserDashboardSkeleton />}>
-      {loading ? <UserDashboardSkeleton /> : <MaintenanceContent />}
-    </Suspense>
-  );
+  return <Suspense fallback={<UserDashboardSkeleton />}><MaintenanceContent /></Suspense>;
 }
