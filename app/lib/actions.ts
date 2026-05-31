@@ -272,3 +272,51 @@ export async function deleteVehicle(id: string) {
 
   revalidatePath('/dashboard/fleet/vessels');
 }
+
+//MAINTENANCE
+const MaintenanceSchema = z.object({
+  vessel_id: z.string().uuid(), // MEMASTIKAN format input UUID benar
+  task: z.string().min(1),
+  status: z.enum(["PLANNED", "IN_PROGRESS", "DONE"]), // MEMBATASI input agar tidak asal
+  date: z.string(), // Format tanggal
+});
+
+export async function saveSchedule(formData: FormData) {
+  const id = formData.get('id') as string;
+
+  const validated = MaintenanceSchema.safeParse({
+    vessel_id: formData.get('vessel_id'),
+    task: formData.get('task'),
+    status: formData.get('status'),
+    date: formData.get('date'),
+  });
+
+  if (!validated.success) {
+    console.error("Validasi Gagal:", validated.error);
+    return { error: "Data tidak valid" }; 
+  }
+
+  const { vessel_id, task, status, date } = validated.data;
+
+  console.log("Mencoba menyimpan data:", { id, vessel_id, task, status, date });
+
+  try {
+    if (id) {
+      const result = await sql`UPDATE maintenance_schedules SET vessel_id=${vessel_id}, task=${task}, status=${status}, maintenance_date=${date} WHERE id=${id}`;
+      console.log("Update result:", result);
+    } else {
+      const result = await sql`INSERT INTO maintenance_schedules (vessel_id, task, status, maintenance_date) VALUES (${vessel_id}, ${task}, ${status}, ${date})`;
+      console.log("Insert result:", result);
+    }
+    
+    console.log("Data berhasil diproses ke database!");
+    revalidatePath('/maintenance');
+  } catch (error) {
+    console.error("GAGAL SIMPAN KE DATABASE:", error);
+  }
+}
+
+export async function deleteSchedule(id: string) {
+  await sql`DELETE FROM maintenance_schedules WHERE id=${id}`;
+  revalidatePath('/maintenance');
+}

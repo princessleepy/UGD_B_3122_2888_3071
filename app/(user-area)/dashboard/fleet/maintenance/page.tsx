@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, Suspense } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { maintenanceData as rawData } from '@/app/lib/placeholder-data';
 import { UserDashboardSkeleton } from '@/app/ui/skeletons';
 
@@ -24,20 +24,32 @@ interface MaintenanceItem {
 const taskOptions = ["Engine Oil Change", "Propeller Check", "Hull Cleaning", "Engine Overhaul", "Electrical Repair"];
 
 function MaintenanceContent() {
-  const [maintenanceData] = useState<MaintenanceItem[]>(
-    rawData.map((item, index) => ({
-      id: index.toString(),
-      name: item.name,
-      health: Math.floor(Math.random() * 50) + 20, // Start lower to show warning
-      issueType: taskOptions[Math.floor(Math.random() * taskOptions.length)]
-    }))
-  );
-
+  const [maintenanceData, setMaintenanceData] = useState<MaintenanceItem[]>([]);
+  const [isMounted, setIsMounted] = useState(false);
   const [schedules, setSchedules] = useState<ScheduleItem[]>([]);
-  const [formData, setFormData] = useState({ id: '', vesselName: '', task: '', date: '', status: 'PLANNED' as ScheduleStatus });
+  
+  // FORM STATE: Sudah mencakup ID
+  const [formData, setFormData] = useState({ 
+    id: '', 
+    vesselName: '', 
+    task: '', 
+    date: '', 
+    status: 'PLANNED' as ScheduleStatus 
+  });
+  
   const [isEditing, setIsEditing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 3;
+
+  useEffect(() => {
+    setMaintenanceData(rawData.map((item, index) => ({
+      id: index.toString(),
+      name: item.name,
+      health: Math.floor(Math.random() * 50) + 20,
+      issueType: taskOptions[Math.floor(Math.random() * taskOptions.length)]
+    })));
+    setIsMounted(true);
+  }, []);
 
   const paginatedData = maintenanceData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
   const totalPages = Math.ceil(maintenanceData.length / itemsPerPage);
@@ -47,11 +59,15 @@ function MaintenanceContent() {
     if (isEditing) {
       setSchedules(schedules.map(s => s.id === formData.id ? formData : s));
     } else {
+      // Menambah data baru dengan ID unik (Date.now())
       setSchedules([...schedules, { ...formData, id: Date.now().toString() }]);
     }
     setFormData({ id: '', vesselName: '', task: '', date: '', status: 'PLANNED' });
     setIsEditing(false);
   };
+
+  // Kunci agar tidak Hydration Error: render hanya setelah di browser
+  if (!isMounted) return null;
 
   return (
     <div className="min-h-screen bg-[#0a0514] text-white font-mono p-12 space-y-12">
@@ -78,7 +94,6 @@ function MaintenanceContent() {
           <h2 className="text-[12px] uppercase text-gray-400 tracking-widest mb-6">Fleet Health Monitoring</h2>
           {paginatedData.map(m => {
             const active = schedules.find(s => s.vesselName.toLowerCase() === m.name.toLowerCase());
-            // LOGIC OTOMATIS: Done = 100% Health
             const currentHealth = active?.status === 'DONE' ? 100 : m.health;
 
             return (
@@ -125,7 +140,7 @@ function MaintenanceContent() {
               <option value="DONE">DONE</option>
             </select>
             <input type="date" className="w-full bg-black/40 p-4 rounded-xl text-sm border border-white/10" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
-            <button className="w-full bg-[#bc66ff] text-black py-4 rounded-xl font-black text-[11px] uppercase tracking-widest">{isEditing ? 'Update' : 'Save'}</button>
+            <button type="submit" className="w-full bg-[#bc66ff] text-black py-4 rounded-xl font-black text-[11px] uppercase tracking-widest">{isEditing ? 'Update' : 'Save'}</button>
           </form>
 
           <div className="mt-8 space-y-3 max-h-[300px] overflow-y-auto">
