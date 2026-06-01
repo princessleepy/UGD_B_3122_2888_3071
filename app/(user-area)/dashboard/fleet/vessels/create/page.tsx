@@ -23,10 +23,10 @@ export default function CreateVesselPage() {
       <div className="flex justify-between items-start">
         <div>
           <h1 className="text-3xl font-black uppercase tracking-tighter">
-            Create Shipment
+            Create Vehicle
           </h1>
           <p className="text-[10px] text-[#bc66ff]/60 font-bold tracking-[0.3em] mt-1 uppercase">
-            Register new cargo transaction
+            Register new vehicle data
           </p>
         </div>
         <Link
@@ -38,6 +38,7 @@ export default function CreateVesselPage() {
       </div>
 
       <div className="bg-[#150e24]/60 border border-white/5 rounded-[2.5rem] p-8 space-y-8">
+        {/* Global Error Alert */}
         {state?.error && (
           <div className="p-4 bg-rose-500/10 border border-rose-500/30 rounded-2xl">
             <p className="text-[10px] text-rose-300 font-black uppercase tracking-[0.2em]">
@@ -110,6 +111,7 @@ export default function CreateVesselPage() {
   );
 }
 
+// ✅ Input Component - HAPUS 'required'
 function InputWithState({
   label,
   name,
@@ -133,7 +135,7 @@ function InputWithState({
         {label}
       </label>
       <input
-        required
+        // ❌ HAPUS: required
         name={name}
         defaultValue={defaultValue}
         disabled={isPending}
@@ -141,6 +143,7 @@ function InputWithState({
           error ? 'border-rose-500' : 'border-white/10'
         }`}
       />
+      {/* ✅ Tampilkan error dari server */}
       {error && (
         <p className="text-[9px] text-rose-400 font-black uppercase tracking-[0.2em] mt-2">
           {error}
@@ -150,6 +153,7 @@ function InputWithState({
   );
 }
 
+// ✅ Select Component - HAPUS 'required' + TAMBAH "Select option"
 function SelectWithState({
   label,
   name,
@@ -171,19 +175,22 @@ function SelectWithState({
         {label}
       </label>
       <select
-        required
+        // ❌ HAPUS: required
         name={name}
         disabled={isPending}
         className={`w-full bg-black/30 border rounded-2xl px-5 py-4 text-sm outline-none focus:border-[#bc66ff]/60 disabled:opacity-50 ${
           error ? 'border-rose-500' : 'border-white/10'
         }`}
       >
+        {/* ✅ Placeholder option */}
+        <option value="">Select option</option>
         {options.map((option) => (
           <option key={option} value={option} className="bg-[#150e24]">
             {option}
           </option>
         ))}
       </select>
+      {/* ✅ Tampilkan error dari server */}
       {error && (
         <p className="text-[9px] text-rose-400 font-black uppercase tracking-[0.2em] mt-2">
           {error}

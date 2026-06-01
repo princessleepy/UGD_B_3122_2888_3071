@@ -92,7 +92,7 @@ export default function VesselClient({
         </div>
       </div>
 
-      {/* Modal Centered */}
+      {/* Modal Centered dengan Error Handling */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-[#110a1c] border border-[#bc66ff]/30 rounded-3xl p-8 w-full max-w-2xl shadow-[0_0_60px_rgba(188,102,255,0.3)] relative max-h-[90vh] overflow-y-auto">
@@ -107,6 +107,7 @@ export default function VesselClient({
               Register New Vehicle
             </h2>
 
+            {/* Global Error */}
             {state?.error && (
               <div className="mb-6 p-4 bg-rose-500/10 border border-rose-500/30 rounded-2xl">
                 <p className="text-[10px] text-rose-300 font-black uppercase tracking-[0.2em]">
@@ -115,6 +116,7 @@ export default function VesselClient({
               </div>
             )}
 
+            {/* Form dengan Error Handling per Field */}
             <form action={formAction} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <InputWithState label="Vehicle Name" name="vehicleName" state={state} isPending={isPending} />
@@ -223,14 +225,18 @@ export default function VesselClient({
                   >
                     Edit
                   </Link>
-                  <form action={deleteAction.bind(null, vehicle.id)}>
-                    <button
-                      type="submit"
-                      className="text-rose-500 hover:text-white"
+                  {/* Delete - Trigger 404 Page */}
+                    <Link
+                    href="/dashboard/fleet/vessels/delete-not-implemented"
+                    className="text-rose-500 hover:text-white"
+                    onClick={(e) => {
+                        e.preventDefault();
+                        // Redirect ke halaman yang tidak ada → trigger app/not-found.tsx
+                        window.location.href = '/dashboard/fleet/vessels/delete-not-implemented';
+                    }}
                     >
-                      Delete
-                    </button>
-                  </form>
+                    Delete
+                    </Link>
                 </div>
               </div>
 
@@ -289,6 +295,7 @@ export default function VesselClient({
   );
 }
 
+// ✅ Input Component - HAPUS 'required'
 function InputWithState({ 
   label, 
   name, 
@@ -312,7 +319,7 @@ function InputWithState({
         {label}
       </label>
       <input
-        required
+        // ❌ HAPUS: required attribute
         name={name}
         defaultValue={defaultValue}
         disabled={isPending}
@@ -320,6 +327,7 @@ function InputWithState({
           error ? 'border-rose-500' : 'border-white/10 focus:border-[#bc66ff]'
         }`}
       />
+      {/* ✅ Tampilkan error text dari server */}
       {error && (
         <p className="text-[8px] text-rose-400 font-black uppercase tracking-[0.2em] mt-2">
           {error}
@@ -329,6 +337,7 @@ function InputWithState({
   );
 }
 
+// ✅ Select Component - HAPUS 'required' + TAMBAH placeholder
 function SelectWithState({ 
   label, 
   name, 
@@ -350,19 +359,22 @@ function SelectWithState({
         {label}
       </label>
       <select
-        required
+        //  HAPUS: required attribute
         name={name}
         disabled={isPending}
         className={`w-full bg-[#07040d] border rounded-xl p-3 outline-none font-bold text-gray-300 cursor-pointer transition-all disabled:opacity-50 ${
           error ? 'border-rose-500' : 'border-white/10 focus:border-[#bc66ff]'
         }`}
       >
+        {/* ✅ Tambah placeholder option */}
+        <option value="">Select option</option>
         {options.map((option) => (
           <option key={option} value={option} className="bg-[#150e24]">
             {option}
           </option>
         ))}
       </select>
+      {/* ✅ Tampilkan error text dari server */}
       {error && (
         <p className="text-[8px] text-rose-400 font-black uppercase tracking-[0.2em] mt-2">
           {error}
