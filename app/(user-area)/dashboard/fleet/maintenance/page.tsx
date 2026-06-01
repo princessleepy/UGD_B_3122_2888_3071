@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect } from 'react';  // ✅ Satu import saja, hapus duplikat
 import { maintenanceData as rawData } from '@/app/lib/placeholder-data';
 import { UserDashboardSkeleton } from '@/app/ui/skeletons';
 
+// ✅ Type definitions
 type ScheduleStatus = "PLANNED" | "IN_PROGRESS" | "DONE";
 
 interface ScheduleItem {
@@ -23,12 +24,18 @@ interface MaintenanceItem {
 
 const taskOptions = ["Engine Oil Change", "Propeller Check", "Hull Cleaning", "Engine Overhaul", "Electrical Repair"];
 
-function MaintenanceContent() {
+// ✅ Main Client Component
+export default function MaintenancePage() {
+  // ✅ Set title dinamis (karena ini Client Component, tidak bisa pakai export metadata)
+  useEffect(() => {
+    document.title = 'Maintenance Schedule | PT. Samudra Technology Nusantara';
+  }, []);
+
   const [maintenanceData, setMaintenanceData] = useState<MaintenanceItem[]>([]);
   const [isMounted, setIsMounted] = useState(false);
   const [schedules, setSchedules] = useState<ScheduleItem[]>([]);
   
-  // FORM STATE: Sudah mencakup ID
+  // FORM STATE
   const [formData, setFormData] = useState({ 
     id: '', 
     vesselName: '', 
@@ -41,6 +48,7 @@ function MaintenanceContent() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 3;
 
+  // Initialize data
   useEffect(() => {
     setMaintenanceData(rawData.map((item, index) => ({
       id: index.toString(),
@@ -59,15 +67,14 @@ function MaintenanceContent() {
     if (isEditing) {
       setSchedules(schedules.map(s => s.id === formData.id ? formData : s));
     } else {
-      // Menambah data baru dengan ID unik (Date.now())
       setSchedules([...schedules, { ...formData, id: Date.now().toString() }]);
     }
     setFormData({ id: '', vesselName: '', task: '', date: '', status: 'PLANNED' });
     setIsEditing(false);
   };
 
-  // Kunci agar tidak Hydration Error: render hanya setelah di browser
-  if (!isMounted) return null;
+  // Prevent hydration error
+  if (!isMounted) return <UserDashboardSkeleton />;
 
   return (
     <div className="min-h-screen bg-[#0a0514] text-white font-mono p-12 space-y-12">
@@ -158,8 +165,4 @@ function MaintenanceContent() {
       </div>
     </div>
   );
-}
-
-export default function MaintenancePage() {
-  return <Suspense fallback={<UserDashboardSkeleton />}><MaintenanceContent /></Suspense>;
 }

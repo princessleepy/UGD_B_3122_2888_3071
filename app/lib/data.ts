@@ -450,3 +450,4 @@ export async function fetchAllVehicles() {
     throw new Error('Failed to fetch all vehicles.');
   }
 }
+

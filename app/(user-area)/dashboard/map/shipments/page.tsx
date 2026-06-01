@@ -1,13 +1,19 @@
+import { generatePageMetadata } from '@/app/lib/metadata';
 import Link from 'next/link';
-//agar tidak ada chace
-export const dynamic = 'force-dynamic';
-
 import {
   fetchFilteredShipmentTransactions,
   fetchShipmentTransactionPages,
 } from '@/app/lib/data';
+import { deleteShipmentFormAction } from '@/app/lib/actions'; // ✅ Pakai wrapper function
 
-import { deleteShipmentTransaction } from '@/app/lib/actions';
+export const dynamic = 'force-dynamic';
+
+// ✅ METADATA untuk halaman ini
+export const metadata = generatePageMetadata({
+  title: 'Shipments',
+  description: 'Manage cargo shipments',
+  keywords: ['shipments', 'cargo', 'logistics', 'tracking'],
+});
 
 export default async function ActiveShipmentsPage(props: {
   searchParams?: Promise<{
@@ -186,11 +192,12 @@ export default async function ActiveShipmentsPage(props: {
                         Edit
                       </Link>
 
+                      {/* ✅ FORM DELETE: Pakai wrapper function + wrap dengan async */}
                       <form
-                        action={deleteShipmentTransaction.bind(
-                          null,
-                          shipment.id
-                        )}
+                        action={async () => {
+                          'use server';
+                          await deleteShipmentFormAction(shipment.id);
+                        }}
                       >
                         <button
                           type="submit"
