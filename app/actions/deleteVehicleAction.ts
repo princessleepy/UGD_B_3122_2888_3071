@@ -1,7 +1,8 @@
 // app/actions/deleteVehicleAction.ts
 'use server';
 
-import { deleteVessel as deleteVehicleFromDB, type ActionResponse } from '@/app/lib/actions';
+// ✅ PERBAIKAN: Import deleteVehicle (bukan deleteVessel)
+import { deleteVehicle as deleteVehicleFromDB, type ActionResponse } from '@/app/lib/actions';
 
 export async function deleteVehicleAction(vehicleId: string): Promise<ActionResponse> {
   try {
