@@ -18,11 +18,56 @@ const vehicles = [
   { name: 'IRON TITAN', type: 'Heavy Lift Vessel', code: 'MV-20100100', capacity: '4620 NM', status: 'ACTIVE' },
 ];
 
+const STORAGE_KEY = 'createShipmentFormData';
+
+type CreateShipmentFormValues = {
+  shippingDate: string;
+  shippingType: string;
+  shipmentStatus: string;
+  senderName: string;
+  receiverName: string;
+  phoneNumber: string;
+  originCity: string;
+  destinationCity: string;
+  itemName: string;
+  itemType: string;
+  itemWeight: string;
+  price: string;
+  vehicleName: string;
+  vehicleType: string;
+  vehicleCode: string;
+  vehicleCapacity: string;
+  vehicleStatus: string;
+  notes: string;
+};
+
+const initialFormValues: CreateShipmentFormValues = {
+  shippingDate: '',
+  shippingType: '',
+  shipmentStatus: '',
+  senderName: '',
+  receiverName: '',
+  phoneNumber: '',
+  originCity: '',
+  destinationCity: '',
+  itemName: '',
+  itemType: '',
+  itemWeight: '',
+  price: '',
+  vehicleName: vehicles[0].name,
+  vehicleType: vehicles[0].type,
+  vehicleCode: vehicles[0].code,
+  vehicleCapacity: vehicles[0].capacity,
+  vehicleStatus: vehicles[0].status,
+  notes: '',
+};
+
 export default function CreateShipmentPage() {
   const router = useRouter();
   
   const [selectedVehicleName, setSelectedVehicleName] = useState(vehicles[0].name);
   const selectedVehicle = vehicles.find((v) => v.name === selectedVehicleName) || vehicles[0];
+  const [formValues, setFormValues] = useState<CreateShipmentFormValues>(initialFormValues);
 
   const [state, formAction, isPending] = useActionState<ActionResponse, FormData>(
     createShipmentTransaction,
@@ -31,12 +76,52 @@ export default function CreateShipmentPage() {
 
   useEffect(() => {
     document.title = 'Create Shipment | PT. Samudra Technology Nusantara';
-    
+
+    const savedValue = window.sessionStorage.getItem(STORAGE_KEY);
+    if (savedValue) {
+      try {
+        const parsed = JSON.parse(savedValue) as CreateShipmentFormValues;
+        setFormValues(parsed);
+        if (parsed.vehicleName) {
+          setSelectedVehicleName(parsed.vehicleName);
+        }
+      } catch {
+        window.sessionStorage.removeItem(STORAGE_KEY);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const payload = {
+      ...formValues,
+      vehicleName: selectedVehicle.name,
+      vehicleType: selectedVehicle.type,
+      vehicleCode: selectedVehicle.code,
+      vehicleCapacity: selectedVehicle.capacity,
+      vehicleStatus: selectedVehicle.status,
+    };
+
+    setFormValues(payload);
+  }, [selectedVehicle]);
+
+  useEffect(() => {
+    window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(formValues));
+  }, [formValues]);
+
+  useEffect(() => {
     if (state?.success && state.redirectUrl) {
+      window.sessionStorage.removeItem(STORAGE_KEY);
       router.push(state.redirectUrl);
       router.refresh();
     }
-  }, [state, router]);
+  }, [state, router, formValues]);
+
+  function handleFieldChange(name: keyof CreateShipmentFormValues, value: string) {
+    setFormValues((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  }
 
   return (
     <div className="min-h-screen bg-[#0a0514] text-white font-mono p-8">
@@ -75,6 +160,8 @@ export default function CreateShipmentPage() {
               label="Shipping Date" 
               name="shippingDate" 
               type="date" 
+              value={formValues.shippingDate}
+              onChange={(value) => handleFieldChange('shippingDate', value)}
               error={state?.fieldErrors?.shippingDate?.[0]} 
               disabled={isPending} 
             />
@@ -82,6 +169,8 @@ export default function CreateShipmentPage() {
               label="Shipping Type" 
               name="shippingType" 
               options={['Standard', 'Express', 'Priority']} 
+              value={formValues.shippingType}
+              onChange={(value) => handleFieldChange('shippingType', value)}
               error={state?.fieldErrors?.shippingType?.[0]} 
               disabled={isPending} 
             />
@@ -89,6 +178,8 @@ export default function CreateShipmentPage() {
               label="Shipment Status" 
               name="shipmentStatus" 
               options={['PENDING', 'ON ROUTE', 'ARRIVED', 'DELAYED']} 
+              value={formValues.shipmentStatus}
+              onChange={(value) => handleFieldChange('shipmentStatus', value)}
               error={state?.fieldErrors?.shipmentStatus?.[0]} 
               disabled={isPending} 
             />
@@ -104,30 +195,40 @@ export default function CreateShipmentPage() {
             <Input 
               label="Sender Name" 
               name="senderName" 
+              value={formValues.senderName}
+              onChange={(value) => handleFieldChange('senderName', value)}
               error={state?.fieldErrors?.senderName?.[0]} 
               disabled={isPending} 
             />
             <Input 
               label="Receiver Name" 
               name="receiverName" 
+              value={formValues.receiverName}
+              onChange={(value) => handleFieldChange('receiverName', value)}
               error={state?.fieldErrors?.receiverName?.[0]} 
               disabled={isPending} 
             />
             <Input 
               label="Phone Number" 
               name="phoneNumber" 
+              value={formValues.phoneNumber}
+              onChange={(value) => handleFieldChange('phoneNumber', value)}
               error={state?.fieldErrors?.phoneNumber?.[0]} 
               disabled={isPending} 
             />
             <Input 
               label="Origin City" 
               name="originCity" 
+              value={formValues.originCity}
+              onChange={(value) => handleFieldChange('originCity', value)}
               error={state?.fieldErrors?.originCity?.[0]} 
               disabled={isPending} 
             />
             <Input 
               label="Destination City" 
               name="destinationCity" 
+              value={formValues.destinationCity}
+              onChange={(value) => handleFieldChange('destinationCity', value)}
               error={state?.fieldErrors?.destinationCity?.[0]} 
               disabled={isPending} 
             />
@@ -143,12 +244,16 @@ export default function CreateShipmentPage() {
             <Input 
               label="Item Name" 
               name="itemName" 
+              value={formValues.itemName}
+              onChange={(value) => handleFieldChange('itemName', value)}
               error={state?.fieldErrors?.itemName?.[0]} 
               disabled={isPending} 
             />
             <Input 
               label="Item Type" 
               name="itemType" 
+              value={formValues.itemType}
+              onChange={(value) => handleFieldChange('itemType', value)}
               error={state?.fieldErrors?.itemType?.[0]} 
               disabled={isPending} 
             />
@@ -156,6 +261,8 @@ export default function CreateShipmentPage() {
               label="Item Weight (KG)" 
               name="itemWeight" 
               type="number" 
+              value={formValues.itemWeight}
+              onChange={(value) => handleFieldChange('itemWeight', value)}
               error={state?.fieldErrors?.itemWeight?.[0]} 
               disabled={isPending} 
             />
@@ -163,6 +270,8 @@ export default function CreateShipmentPage() {
               label="Price / Rate" 
               name="price" 
               type="number" 
+              value={formValues.price}
+              onChange={(value) => handleFieldChange('price', value)}
               error={state?.fieldErrors?.price?.[0]} 
               disabled={isPending} 
             />
@@ -214,6 +323,8 @@ export default function CreateShipmentPage() {
             name="notes"
             rows={4}
             disabled={isPending}
+            value={formValues.notes}
+            onChange={(e) => handleFieldChange('notes', e.target.value)}
             className="w-full bg-black/30 border border-white/10 rounded-2xl px-5 py-4 text-sm outline-none focus:border-[#bc66ff]/60 disabled:opacity-50"
             placeholder="Add shipment notes..."
           />
@@ -250,12 +361,16 @@ function Input({
   label, 
   name, 
   type = 'text', 
+  value, 
+  onChange, 
   error, 
   disabled 
 }: { 
   label: string; 
   name: string; 
   type?: string; 
+  value?: string;
+  onChange?: (value: string) => void;
   error?: string; 
   disabled?: boolean; 
 }) {
@@ -265,15 +380,15 @@ function Input({
         {label}
       </label>
       <input
-        // ❌ TIDAK ADA 'required' - biar server yang validasi
         name={name}
         type={type}
+        value={value}
+        onChange={(e) => onChange?.(e.target.value)}
         disabled={disabled}
         className={`w-full bg-black/30 border rounded-2xl px-5 py-4 text-sm outline-none focus:border-[#bc66ff]/60 disabled:opacity-50 ${
           error ? 'border-rose-500' : 'border-white/10'
         }`}
       />
-      {/* ✅ TAMPILKAN ERROR JIKA ADA */}
       {error && (
         <p className="text-[9px] text-rose-400 font-black uppercase tracking-[0.2em] mt-2">
           {error}
@@ -288,12 +403,16 @@ function Select({
   label, 
   name, 
   options, 
+  value, 
+  onChange, 
   error, 
   disabled 
 }: { 
   label: string; 
   name: string; 
   options: string[]; 
+  value?: string;
+  onChange?: (value: string) => void;
   error?: string; 
   disabled?: boolean; 
 }) {
@@ -303,8 +422,9 @@ function Select({
         {label}
       </label>
       <select
-        // ❌ TIDAK ADA 'required' - biar server yang validasi
         name={name}
+        value={value}
+        onChange={(e) => onChange?.(e.target.value)}
         disabled={disabled}
         className={`w-full bg-black/30 border rounded-2xl px-5 py-4 text-sm outline-none focus:border-[#bc66ff]/60 disabled:opacity-50 ${
           error ? 'border-rose-500' : 'border-white/10'
@@ -317,7 +437,6 @@ function Select({
           </option>
         ))}
       </select>
-      {/* ✅ TAMPILKAN ERROR JIKA ADA */}
       {error && (
         <p className="text-[9px] text-rose-400 font-black uppercase tracking-[0.2em] mt-2">
           {error}

@@ -3,12 +3,12 @@
 import Link from 'next/link';
 import { useState, useActionState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createVehicle, type ActionResponse } from '@/app/lib/actions';
+import { createVessel, type ActionResponse } from '@/app/lib/actions';
 
 export default function CreateVesselPage() {
   const router = useRouter();
   const [state, formAction, isPending] = useActionState<ActionResponse, FormData>(
-    createVehicle,
+    createVessel,
     { success: false }
   );
 

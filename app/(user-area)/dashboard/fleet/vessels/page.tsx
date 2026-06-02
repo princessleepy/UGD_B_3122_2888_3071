@@ -4,9 +4,7 @@ import {
 } from '@/app/lib/data';
 
 import VesselClient from './VesselClient';
-
-// ✅ PENTING: Import action delete dari file terpisah
-import { deleteVehicleAction } from '@/app/actions/deleteVehicleAction';
+import { generateVesselCode, deleteVessel } from '@/app/lib/actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,26 +19,19 @@ export default async function VesselListPage(props: {
   const query = searchParams?.query || '';
   const status = searchParams?.status || 'ALL';
   const currentPage = Number(searchParams?.page) || 1;
-
+  
+  // ✅ Fetch data vessels
   const vehicles = await fetchFilteredVehicles(query, status, currentPage);
   const totalPages = await fetchVehiclePages(query, status);
-
-  const previousPageUrl = `/dashboard/fleet/vessels?query=${encodeURIComponent(
-    query
-  )}&status=${encodeURIComponent(status)}&page=${Math.max(
-    currentPage - 1,
-    1
-  )}`;
-
-  const nextPageUrl = `/dashboard/fleet/vessels?query=${encodeURIComponent(
-    query
-  )}&status=${encodeURIComponent(status)}&page=${Math.min(
-    currentPage + 1,
-    totalPages || 1
-  )}`;
+  
+  // ✅ Generate next vehicle code untuk modal
+  const nextVehicleCode = await generateVesselCode();
+  
+  // ✅ Pagination URLs
+  const previousPageUrl = `/dashboard/fleet/vessels?query=${encodeURIComponent(query)}&status=${encodeURIComponent(status)}&page=${Math.max(currentPage - 1, 1)}`;
+  const nextPageUrl = `/dashboard/fleet/vessels?query=${encodeURIComponent(query)}&status=${encodeURIComponent(status)}&page=${Math.min(currentPage + 1, totalPages || 1)}`;
 
   return (
-    // ✅ Pass deleteAction ke VesselClient
     <VesselClient
       vehicles={vehicles}
       totalPages={totalPages}
@@ -49,7 +40,8 @@ export default async function VesselListPage(props: {
       status={status}
       previousPageUrl={previousPageUrl}
       nextPageUrl={nextPageUrl}
-      deleteAction={deleteVehicleAction} 
+      deleteAction={deleteVessel}
+      nextVehicleCode={nextVehicleCode}
     />
   );
 }

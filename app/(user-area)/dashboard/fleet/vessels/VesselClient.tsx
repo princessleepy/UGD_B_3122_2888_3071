@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useActionState } from 'react';
-import { createVehicle, type ActionResponse } from '@/app/lib/actions';
+import { createVessel, type ActionResponse } from '@/app/lib/actions';
 
 export default function VesselClient({
   vehicles,
@@ -13,6 +13,7 @@ export default function VesselClient({
   previousPageUrl,
   nextPageUrl,
   deleteAction,
+  nextVehicleCode,
 }: {
   vehicles: any[];
   totalPages: number;
@@ -21,12 +22,13 @@ export default function VesselClient({
   status: string;
   previousPageUrl: string;
   nextPageUrl: string;
-  deleteAction: (vehicleId: string) => Promise<void>;
+  deleteAction: (vehicleId: string) => Promise<ActionResponse>;
+  nextVehicleCode: string;
 }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   
   const [state, formAction, isPending] = useActionState<ActionResponse, FormData>(
-    createVehicle,
+    createVessel,  // ✅
     { success: false }
   );
 
@@ -118,9 +120,28 @@ export default function VesselClient({
 
             {/* Form dengan Error Handling per Field */}
             <form action={formAction} className="space-y-4">
+              <input
+                type="hidden"
+                name="vehicleCode"
+                value={nextVehicleCode}
+              />
+
               <div className="grid grid-cols-2 gap-4">
+
+                {/* Vehicle Code (Readonly) */}
+                <div>
+                  <label className="block text-gray-400 font-bold uppercase tracking-wider text-[9px] mb-2">
+                    Vehicle Code
+                  </label>
+
+                  <input
+                    value={nextVehicleCode}
+                    readOnly
+                    className="w-full bg-[#07040d] border border-white/10 rounded-xl p-3 font-bold text-[#bc66ff] cursor-not-allowed"
+                  />
+                </div>
+
                 <InputWithState label="Vehicle Name" name="vehicleName" state={state} isPending={isPending} />
-                <InputWithState label="Vehicle Code" name="vehicleCode" state={state} isPending={isPending} />
                 <InputWithState label="Vehicle Type" name="vehicleType" state={state} isPending={isPending} />
                 <InputWithState label="Capacity" name="capacity" state={state} isPending={isPending} />
                 <SelectWithState
@@ -226,17 +247,22 @@ export default function VesselClient({
                     Edit
                   </Link>
                   {/* Delete - Trigger 404 Page */}
-                    <Link
-                    href="/dashboard/fleet/vessels/delete-not-implemented"
-                    className="text-rose-500 hover:text-white"
-                    onClick={(e) => {
-                        e.preventDefault();
-                        // Redirect ke halaman yang tidak ada → trigger app/not-found.tsx
-                        window.location.href = '/dashboard/fleet/vessels/delete-not-implemented';
-                    }}
+                    <button
+                      onClick={async () => {
+                        const confirmDelete = confirm(
+                          `Hapus kendaraan ${vehicle.vehicle_name}?`
+                        );
+
+                        if (!confirmDelete) return;
+
+                        await deleteAction(vehicle.id);
+
+                        window.location.reload();
+                      }}
+                      className="text-rose-500 hover:text-white"
                     >
-                    Delete
-                    </Link>
+                      Delete
+                    </button>
                 </div>
               </div>
 

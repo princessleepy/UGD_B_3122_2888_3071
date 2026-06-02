@@ -4,7 +4,7 @@ import { z } from 'zod';
 import postgres from 'postgres';
 import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 
 const sql = postgres(process.env.POSTGRES_URL!, { ssl: 'require' });
 
@@ -18,13 +18,8 @@ export type ActionResponse = {
 
 // ==================== ROLE HELPER (R4 - Role-Based Access) ====================
 
-/**
- * Helper untuk validasi role user
- * @param allowedRoles - Array role yang diizinkan mengakses action ini
- * @throws Error jika user tidak memiliki role yang diizinkan
- */
-async function requireRole(allowedRoles: string[]) {  // ✅ TAMBAHKAN async
-  const cookieStore = await cookies();  // ✅ TAMBAHKAN await
+async function requireRole(allowedRoles: string[]) {
+  const cookieStore = await cookies();
   const role = cookieStore.get('userRole')?.value;
   
   if (!role || !allowedRoles.includes(role)) {
@@ -46,15 +41,23 @@ export async function loginUser(
   }
 
   try {
-    // Cek user di database
+    // ✅ QUERY SEDERHANA - TANPA JOIN
     const result = await sql`
-      SELECT id, email, password_hash, role, full_name
+      SELECT 
+        user_id,
+        email,
+        full_name,
+        role,
+        is_active,
+        last_login,
+        username,
+        password_hash
       FROM users
-      WHERE email = ${email}
+      WHERE email = ${email} AND is_active = true
     `;
 
     if (result.length === 0) {
-      return { success: false, error: 'Email tidak terdaftar' };
+      return { success: false, error: 'Email tidak terdaftar atau akun tidak aktif' };
     }
 
     const user = result[0];
@@ -66,7 +69,11 @@ export async function loginUser(
     }
 
     // Update last_login
-    await sql`UPDATE users SET last_login = NOW() WHERE id = ${user.id}`;
+    await sql`
+      UPDATE users 
+      SET last_login = NOW()
+      WHERE user_id = ${user.user_id}
+    `;
 
     // Set cookies
     const cookieStore = await cookies();
@@ -90,6 +97,12 @@ export async function loginUser(
       maxAge: 60 * 60 * 24, 
       path: '/' 
     });
+    cookieStore.set('userId', user.user_id, { 
+      httpOnly: true, 
+      secure: isProd, 
+      maxAge: 60 * 60 * 24, 
+      path: '/' 
+    });
 
     // Redirect sesuai role
     const redirectUrl = user.role === 'admin' ? '/admin' : '/dashboard';
@@ -106,6 +119,7 @@ export async function logoutUser(): Promise<ActionResponse> {
   cookieStore.delete('isLoggedIn');
   cookieStore.delete('userRole');
   cookieStore.delete('userName');
+  cookieStore.delete('userId');
   return { success: true, redirectUrl: '/login' };
 }
 
@@ -132,21 +146,34 @@ const ShipmentSchema = z.object({
   notes: z.string().optional(),
 });
 
-function generateTrackingNumber() {
-  const date = new Date();
-  const year = date.getFullYear();
-  const unique = Date.now().toString().slice(-6);
-  return `STN-${year}-${unique}`;
+async function generateTrackingNumber() {
+  const year = new Date().getFullYear();
+
+  const result = await sql`
+    SELECT tracking_number
+    FROM shipment_transactions
+    WHERE tracking_number LIKE ${`STN-${year}-%`}
+    ORDER BY tracking_number DESC
+    LIMIT 1
+  `;
+
+  let nextNumber = 1;
+
+  if (result.length > 0) {
+    const lastTracking = result[0].tracking_number;
+    const lastNumber = parseInt(lastTracking.split('-')[2]);
+    nextNumber = lastNumber + 1;
+  }
+
+  return `STN-${year}-${String(nextNumber).padStart(3, '0')}`;
 }
 
-// ✅ CREATE SHIPMENT - R4: Admin & Operator boleh create
 export async function createShipmentTransaction(
   prevState: ActionResponse,
   formData: FormData
 ): Promise<ActionResponse> {
-  // 🔐 VALIDASI ROLE
   try {
-    await requireRole(['admin', 'operator']);  // ✅ TAMBAHKAN await
+    await requireRole(['admin', 'operator']);
   } catch (error) {
     return { 
       success: false, 
@@ -184,7 +211,7 @@ export async function createShipmentTransaction(
   }
 
   try {
-    const trackingNumber = generateTrackingNumber();
+    const trackingNumber = await generateTrackingNumber();
     
     await sql`
       INSERT INTO shipment_transactions (
@@ -192,7 +219,8 @@ export async function createShipmentTransaction(
         phone_number, origin_city, destination_city, item_name,
         item_type, item_weight, price, vehicle_name, vehicle_type,
         vehicle_code, vehicle_capacity, vehicle_status,
-        shipping_type, shipment_status, notes
+        shipping_type, shipment_status, notes,
+        created_at, updated_at
       ) VALUES (
         ${trackingNumber}, ${validatedFields.data.shippingDate},
         ${validatedFields.data.senderName}, ${validatedFields.data.receiverName},
@@ -203,7 +231,8 @@ export async function createShipmentTransaction(
         ${validatedFields.data.vehicleType}, ${validatedFields.data.vehicleCode},
         ${validatedFields.data.vehicleCapacity}, ${validatedFields.data.vehicleStatus},
         ${validatedFields.data.shippingType}, ${validatedFields.data.shipmentStatus},
-        ${validatedFields.data.notes || null}
+        ${validatedFields.data.notes || null},
+        NOW(), NOW()
       )
     `;
 
@@ -216,14 +245,12 @@ export async function createShipmentTransaction(
   }
 }
 
-// ✅ UPDATE SHIPMENT - R4: Admin & Operator boleh update
 export async function updateShipmentTransaction(
   prevState: ActionResponse,
   formData: FormData
 ): Promise<ActionResponse> {
-  // 🔐 VALIDASI ROLE
   try {
-    await requireRole(['admin', 'operator']);  // ✅ TAMBAHKAN await
+    await requireRole(['admin', 'operator']);
   } catch (error) {
     return { 
       success: false, 
@@ -283,7 +310,8 @@ export async function updateShipmentTransaction(
         vehicle_status = ${validatedFields.data.vehicleStatus},
         shipping_type = ${validatedFields.data.shippingType},
         shipment_status = ${validatedFields.data.shipmentStatus},
-        notes = ${validatedFields.data.notes || null}
+        notes = ${validatedFields.data.notes || null},
+        updated_at = NOW()
       WHERE id = ${id}
     `;
 
@@ -296,11 +324,9 @@ export async function updateShipmentTransaction(
   }
 }
 
-// ✅ DELETE SHIPMENT - R4: HANYA Admin boleh delete
 export async function deleteShipmentTransaction(id: string): Promise<ActionResponse> {
-  // 🔐 VALIDASI ROLE: Admin only
   try {
-    await requireRole(['admin']);  // ✅ TAMBAHKAN await
+    await requireRole(['admin']);
   } catch (error) {
     return { 
       success: false, 
@@ -321,11 +347,10 @@ export async function deleteShipmentTransaction(id: string): Promise<ActionRespo
 // ==================== VEHICLE SCHEMA & ACTIONS ====================
 
 const VehicleSchema = z.object({
-  vehicleCode: z.string().min(1, 'Kode kendaraan wajib diisi'),
-  vehicleName: z.string().min(1, 'Nama kendaraan wajib diisi'),
-  vehicleType: z.string().min(1, 'Jenis kendaraan wajib diisi'),
-  capacity: z.string().min(1, 'Kapasitas wajib diisi'),
-  status: z.string().min(1, 'Status wajib diisi'),
+  vehicleName: z.string().min(1),
+  vehicleType: z.string().min(1),
+  capacity: z.string().min(1),
+  status: z.string().min(1),
   registryStatus: z.string().optional(),
   hullIntegrity: z.string().optional(),
 });
@@ -340,14 +365,38 @@ function getVehicleStatusColor(status: string) {
   }
 }
 
-// ✅ CREATE VEHICLE - R4: Admin & Operator boleh create
+export async function generateVehicleCode() {
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
+  const datePart = `${yyyy}${mm}${dd}`;
+
+  const result = await sql`
+    SELECT vehicle_code
+    FROM vehicles
+    WHERE vehicle_code LIKE ${`MV-${datePart}-%`}
+    ORDER BY vehicle_code DESC
+    LIMIT 1
+  `;
+
+  let nextNumber = 1;
+
+  if (result.length > 0) {
+    const lastCode = result[0].vehicle_code;
+    const lastNumber = parseInt(lastCode.split('-')[2]);
+    nextNumber = lastNumber + 1;
+  }
+
+  return `MV-${datePart}-${String(nextNumber).padStart(3, '0')}`;
+}
+
 export async function createVehicle(
   prevState: ActionResponse,
   formData: FormData
 ): Promise<ActionResponse> {
-  // 🔐 VALIDASI ROLE
   try {
-    await requireRole(['admin', 'operator']);  // ✅ TAMBAHKAN await
+    await requireRole(['admin', 'operator']);
   } catch (error) {
     return { 
       success: false, 
@@ -356,7 +405,6 @@ export async function createVehicle(
   }
 
   const validatedFields = VehicleSchema.safeParse({
-    vehicleCode: formData.get('vehicleCode'),
     vehicleName: formData.get('vehicleName'),
     vehicleType: formData.get('vehicleType'),
     capacity: formData.get('capacity'),
@@ -374,19 +422,23 @@ export async function createVehicle(
   }
 
   try {
+    const vehicleCode = await generateVehicleCode();
+
     await sql`
       INSERT INTO vehicles (
         vehicle_code, vehicle_name, vehicle_type, capacity,
-        status, status_color, registry_status, hull_integrity
+        status, status_color, registry_status, hull_integrity,
+        created_at, updated_at
       ) VALUES (
-        ${validatedFields.data.vehicleCode},
+        ${vehicleCode},
         ${validatedFields.data.vehicleName},
         ${validatedFields.data.vehicleType},
         ${validatedFields.data.capacity},
         ${validatedFields.data.status},
         ${getVehicleStatusColor(validatedFields.data.status)},
         ${validatedFields.data.registryStatus || '2026-ACTIVE'},
-        ${validatedFields.data.hullIntegrity || 'OPTIMAL'}
+        ${validatedFields.data.hullIntegrity || 'OPTIMAL'},
+        NOW(), NOW()
       )
     `;
 
@@ -399,14 +451,12 @@ export async function createVehicle(
   }
 }
 
-// ✅ UPDATE VEHICLE - R4: Admin & Operator boleh update
 export async function updateVehicle(
   prevState: ActionResponse,
   formData: FormData
 ): Promise<ActionResponse> {
-  // 🔐 VALIDASI ROLE
   try {
-    await requireRole(['admin', 'operator']);  // ✅ TAMBAHKAN await
+    await requireRole(['admin', 'operator']);
   } catch (error) {
     return { 
       success: false, 
@@ -417,7 +467,6 @@ export async function updateVehicle(
   const id = formData.get('id') as string;
   
   const validatedFields = VehicleSchema.safeParse({
-    vehicleCode: formData.get('vehicleCode'),
     vehicleName: formData.get('vehicleName'),
     vehicleType: formData.get('vehicleType'),
     capacity: formData.get('capacity'),
@@ -438,14 +487,14 @@ export async function updateVehicle(
     await sql`
       UPDATE vehicles
       SET
-        vehicle_code = ${validatedFields.data.vehicleCode},
         vehicle_name = ${validatedFields.data.vehicleName},
         vehicle_type = ${validatedFields.data.vehicleType},
         capacity = ${validatedFields.data.capacity},
         status = ${validatedFields.data.status},
         status_color = ${getVehicleStatusColor(validatedFields.data.status)},
         registry_status = ${validatedFields.data.registryStatus || '2026-ACTIVE'},
-        hull_integrity = ${validatedFields.data.hullIntegrity || 'OPTIMAL'}
+        hull_integrity = ${validatedFields.data.hullIntegrity || 'OPTIMAL'},
+        updated_at = NOW()
       WHERE id = ${id}
     `;
 
@@ -458,11 +507,9 @@ export async function updateVehicle(
   }
 }
 
-// ✅ DELETE VEHICLE - R4: HANYA Admin boleh delete
 export async function deleteVehicle(id: string): Promise<ActionResponse> {
-  // 🔐 VALIDASI ROLE: Admin only
   try {
-    await requireRole(['admin']);  // ✅ TAMBAHKAN await
+    await requireRole(['admin']);
   } catch (error) {
     return { 
       success: false, 
@@ -491,14 +538,12 @@ const MaintenanceSchema = z.object({
   date: z.string().min(1, 'Tanggal wajib diisi'),
 });
 
-// ✅ SAVE SCHEDULE - R4: Admin & Operator boleh manage maintenance
 export async function saveSchedule(
   prevState: ActionResponse,
   formData: FormData
 ): Promise<ActionResponse> {
-  // 🔐 VALIDASI ROLE
   try {
-    await requireRole(['admin', 'operator']);  // ✅ TAMBAHKAN await
+    await requireRole(['admin', 'operator']);
   } catch (error) {
     return { 
       success: false, 
@@ -529,13 +574,13 @@ export async function saveSchedule(
     if (id && id !== 'new') {
       await sql`
         UPDATE maintenance_schedules 
-        SET vessel_id=${vessel_id}, task=${task}, status=${status}, maintenance_date=${date} 
+        SET vessel_id=${vessel_id}, task=${task}, status=${status}, maintenance_date=${date}, updated_at=NOW()
         WHERE id=${id}
       `;
     } else {
       await sql`
-        INSERT INTO maintenance_schedules (vessel_id, task, status, maintenance_date) 
-        VALUES (${vessel_id}, ${task}, ${status}, ${date})
+        INSERT INTO maintenance_schedules (vessel_id, task, status, maintenance_date, created_at, updated_at) 
+        VALUES (${vessel_id}, ${task}, ${status}, ${date}, NOW(), NOW())
       `;
     }
     
@@ -548,11 +593,9 @@ export async function saveSchedule(
   }
 }
 
-// ✅ DELETE SCHEDULE - R4: HANYA Admin boleh delete schedule
 export async function deleteSchedule(id: string): Promise<ActionResponse> {
-  // 🔐 VALIDASI ROLE: Admin only
   try {
-    await requireRole(['admin']);  // ✅ TAMBAHKAN await
+    await requireRole(['admin']);
   } catch (error) {
     return { 
       success: false, 
@@ -572,48 +615,36 @@ export async function deleteSchedule(id: string): Promise<ActionResponse> {
 
 // ==================== FORM ACTION WRAPPERS ====================
 
-/**
- * Wrapper untuk createVehicle
- */
 export async function createVehicleFormAction(
   prevState: ActionResponse,
   formData: FormData
 ): Promise<ActionResponse> {
-  'use server';  // ✅ TAMBAHKAN INI!
+  'use server';
   return createVehicle(prevState, formData);
 }
 
-/**
- * Wrapper untuk updateVehicle
- */
 export async function updateVehicleFormAction(
   prevState: ActionResponse,
   formData: FormData
 ): Promise<ActionResponse> {
-  'use server';  // ✅ TAMBAHKAN INI!
+  'use server';
   return updateVehicle(prevState, formData);
 }
 
-/**
- * Wrapper untuk deleteVehicle
- */
 export async function deleteVehicleFormAction(id: string): Promise<ActionResponse> {
-  'use server';  // ✅ TAMBAHKAN INI!
+  'use server';
   return deleteVehicle(id);
 }
 
-/**
- * Wrapper untuk deleteShipmentTransaction
- */
 export async function deleteShipmentFormAction(id: string): Promise<ActionResponse> {
-  'use server';  // ✅ TAMBAHKAN INI!
+  'use server';
   return deleteShipmentTransaction(id);
 }
 
-/**
- * Wrapper untuk deleteSchedule
- */
 export async function deleteScheduleFormAction(id: string): Promise<ActionResponse> {
-  'use server';  // ✅ TAMBAHKAN INI!
+  'use server';
   return deleteSchedule(id);
 }
+
+// Bridge createVehicle to createVessel for VesselClient
+export { createVehicle as createVessel };
