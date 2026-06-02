@@ -4,7 +4,8 @@ import {
 } from '@/app/lib/data';
 
 import VesselClient from './VesselClient';
-import { generateVehicleCode, deleteVessel } from '@/app/lib/actions';
+// ✅ PERBAIKAN: Gunakan deleteVehicle (alias), bukan deleteVessel
+import { generateVehicleCode, deleteVehicle } from '@/app/lib/actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,7 +41,7 @@ export default async function VesselListPage(props: {
       status={status}
       previousPageUrl={previousPageUrl}
       nextPageUrl={nextPageUrl}
-      deleteAction={deleteVessel}
+      deleteAction={deleteVehicle}
       nextVehicleCode={nextVehicleCode}
     />
   );

@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { fetchVehicleById } from '@/app/lib/data';
-import { updateVesselFormAction } from '@/app/lib/actions'; // ✅ Gunakan wrapper
+// ✅ PERBAIKAN: Gunakan updateVehicleFormAction (alias), bukan updateVesselFormAction
+import { updateVehicleFormAction } from '@/app/lib/actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +14,7 @@ export default async function EditVesselPage({
   const { id } = await params;
   
   try {
-    const vessel = await fetchVehicleById(id); // ✅ Fetch data
+    const vessel = await fetchVehicleById(id);
     
     if (!vessel) {
       notFound();
@@ -30,8 +31,8 @@ export default async function EditVesselPage({
         </div>
 
         <div className="bg-[#150e24]/60 border border-white/5 rounded-[2.5rem] p-8 space-y-8">
-          {/* ✅ Form action pakai wrapper function (tanpa inline 'use server') */}
-          <form action={updateVesselFormAction as unknown as (formData: FormData) => Promise<void>} className="space-y-8">
+          {/* ✅ PERBAIKAN: Gunakan updateVehicleFormAction */}
+          <form action={updateVehicleFormAction as unknown as (formData: FormData) => Promise<void>} className="space-y-8">
             <input type="hidden" name="id" value={vessel.id} />
             
             <div>
