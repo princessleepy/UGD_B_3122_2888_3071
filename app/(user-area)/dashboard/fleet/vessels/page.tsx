@@ -4,7 +4,7 @@ import {
 } from '@/app/lib/data';
 
 import VesselClient from './VesselClient';
-import { generateVesselCode, deleteVessel } from '@/app/lib/actions';
+import { generateVehicleCode, deleteVessel } from '@/app/lib/actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,7 +25,7 @@ export default async function VesselListPage(props: {
   const totalPages = await fetchVehiclePages(query, status);
   
   // ✅ Generate next vehicle code untuk modal
-  const nextVehicleCode = await generateVesselCode();
+  const nextVehicleCode = await generateVehicleCode();
   
   // ✅ Pagination URLs
   const previousPageUrl = `/dashboard/fleet/vessels?query=${encodeURIComponent(query)}&status=${encodeURIComponent(status)}&page=${Math.max(currentPage - 1, 1)}`;
