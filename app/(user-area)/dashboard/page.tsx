@@ -1,5 +1,5 @@
 import { generatePageMetadata } from '@/app/lib/metadata';
-import { fetchAllVehicles } from '@/app/lib/data';
+import { fetchAllVehicles, fetchVehicleStats } from '@/app/lib/data';
 import DashboardClient from './DashboardClient';
 
 export const dynamic = 'force-dynamic';
@@ -12,7 +12,10 @@ export const metadata = generatePageMetadata({
 });
 
 export default async function DashboardPage() {
-  const vehicles = await fetchAllVehicles();
+  const [vehicles, stats] = await Promise.all([
+    fetchAllVehicles(),
+    fetchVehicleStats(),
+  ]);
 
-  return <DashboardClient vehicles={vehicles} />;
+  return <DashboardClient vehicles={vehicles} stats={stats} />;
 }

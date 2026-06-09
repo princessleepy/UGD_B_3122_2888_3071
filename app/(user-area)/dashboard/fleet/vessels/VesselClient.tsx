@@ -14,6 +14,7 @@ export default function VesselClient({
   nextPageUrl,
   deleteAction,
   nextVehicleCode,
+  readiness,
 }: {
   vehicles: any[];
   totalPages: number;
@@ -24,6 +25,7 @@ export default function VesselClient({
   nextPageUrl: string;
   deleteAction: (vehicleId: string) => Promise<ActionResponse>;
   nextVehicleCode: string;
+  readiness: string;
 }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   
@@ -78,7 +80,7 @@ export default function VesselClient({
               Operational Status
             </p>
             <p className="text-xl font-black text-[#bc66ff]">
-              98.2%{' '}
+              {readiness}%{' '}
               <span className="text-[9px] text-gray-400 uppercase font-bold">
                 Ready
               </span>

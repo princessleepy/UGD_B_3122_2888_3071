@@ -1,19 +1,34 @@
-import postgres from 'postgres';
+import { sql } from './db';
 import {
   CustomerField,
   CustomersTableType,
   InvoiceForm,
   InvoicesTable,
   LatestInvoiceRaw,
+  MapVessel,
+  PerformanceVessel,
   Revenue,
   ShipmentTransaction,
   ShipmentTransactionForm,
   Vehicle,
   VehicleForm,
+  VehicleStats,
+  VesselAuditRow,
 } from './definitions';
-import { formatCurrency } from './utils';
+import {
+  formatCurrency,
+  getMockEfficiency,
+  timeAgo,
+} from './utils';
 
-const sql = postgres(process.env.POSTGRES_URL!, { ssl: 'require' });
+export {
+  timeAgo,
+  buildStatusDistribution,
+  getVehicleLocation,
+  getVehicleEta,
+} from './utils';
+
+
 
 export async function fetchRevenue() {
   try {
@@ -427,27 +442,206 @@ export async function fetchVehicleById(id: string) {
 }
 
 //dashboard
-export async function fetchAllVehicles() {
+export async function fetchVehicleStats(): Promise<VehicleStats> {
+  try {
+    const vehicles = await sql<{ status: string }[]>`
+      SELECT status FROM vehicles
+    `;
+    const total = vehicles.length;
+    const enRoute = vehicles.filter((v) => v.status === 'EN ROUTE').length;
+    const inPort = vehicles.filter((v) => v.status === 'IN PORT').length;
+    const anchorage = vehicles.filter((v) => v.status === 'ANCHORAGE').length;
+    const maintenance = vehicles.filter((v) => v.status === 'MAINTENANCE').length;
+    const readiness =
+      total > 0 ? (((total - maintenance) / total) * 100).toFixed(1) : '0';
+
+    return { total, enRoute, inPort, anchorage, maintenance, readiness };
+  } catch (error) {
+    console.error('Error fetching vehicle stats:', error);
+    return {
+      total: 0,
+      enRoute: 0,
+      inPort: 0,
+      anchorage: 0,
+      maintenance: 0,
+      readiness: '0',
+    };
+  }
+}
+
+export async function fetchAllVehicles(): Promise<Vehicle[]> {
   try {
     const vehicles = await sql<Vehicle[]>`
-      SELECT
-        id,
-        vehicle_code,
-        vehicle_name,
-        vehicle_type,
-        capacity,
-        status,
-        status_color,
-        registry_status,
-        hull_integrity,
-        created_at
-      FROM vehicles
-      ORDER BY created_at DESC
+      SELECT * FROM vehicles ORDER BY vehicle_name
     `;
     return vehicles;
   } catch (error) {
+    console.error('Error fetching vehicles:', error);
+    return [];
+  }
+}
+
+export async function fetchMaintenanceVessels() {
+  try {
+    const vessels = await sql<
+      Pick<Vehicle, 'vehicle_name' | 'vehicle_code' | 'status' | 'updated_at'>[]
+    >`
+      SELECT vehicle_name, vehicle_code, status, updated_at
+      FROM vehicles
+      WHERE status = 'MAINTENANCE'
+      ORDER BY updated_at DESC
+    `;
+    return vessels;
+  } catch (error) {
     console.error('Database Error:', error);
-    throw new Error('Failed to fetch all vehicles.');
+    throw new Error('Failed to fetch maintenance vessels.');
+  }
+}
+
+export async function fetchVesselsForMap() {
+  try {
+    const vessels = await sql<MapVessel[]>`
+      SELECT
+        vehicle_code,
+        vehicle_name,
+        status,
+        CASE
+          WHEN status = 'EN ROUTE' THEN '14.2 KN'
+          ELSE '0.0 KN'
+        END as velocity,
+        CASE
+          WHEN status = 'EN ROUTE' THEN 'SINGAPORE [SIN]'
+          WHEN status = 'IN PORT' THEN 'JAKARTA [JKT]'
+          ELSE 'ANCHORAGE'
+        END as heading
+      FROM vehicles
+      ORDER BY vehicle_name
+      LIMIT 6
+    `;
+    return vessels;
+  } catch (error) {
+    console.error('Database Error:', error);
+    throw new Error('Failed to fetch vessels for map.');
+  }
+}
+
+export async function fetchAvailableVehicles() {
+  try {
+    const vehicles = await sql<
+      Pick<
+        Vehicle,
+        'vehicle_code' | 'vehicle_name' | 'vehicle_type' | 'capacity' | 'status'
+      >[]
+    >`
+      SELECT vehicle_code, vehicle_name, vehicle_type, capacity, status
+      FROM vehicles
+      WHERE status != 'MAINTENANCE'
+      ORDER BY vehicle_name
+    `;
+    return vehicles;
+  } catch (error) {
+    console.error('Error fetching available vehicles:', error);
+    return [];
+  }
+}
+
+export async function fetchVesselAudit(): Promise<VesselAuditRow[]> {
+  try {
+    const vessels = await sql<Vehicle[]>`
+      SELECT * FROM vehicles ORDER BY vehicle_name
+    `;
+
+    return vessels.map((vessel) => ({
+      ...vessel,
+      fuel_percentage:
+        vessel.status === 'EN ROUTE'
+          ? 85
+          : vessel.status === 'MAINTENANCE'
+            ? 30
+            : 60,
+      consumption_rate: vessel.vehicle_type.includes('CARGO') ? 15 : 10,
+      voyage_distance: vessel.status === 'EN ROUTE' ? 3000 : 0,
+      efficiency_score: getMockEfficiency(vessel.status, vessel.vehicle_code),
+    }));
+  } catch (error) {
+    console.error('Database Error:', error);
+    throw new Error('Failed to fetch vessel audit data.');
+  }
+}
+
+export async function fetchTopVesselScores(limit = 4) {
+  try {
+    const vessels = await sql<
+      { vehicle_name: string; efficiency_score: number }[]
+    >`
+      SELECT
+        vehicle_name,
+        CASE
+          WHEN status = 'MAINTENANCE' THEN 40
+          ELSE 85 + (RANDOM() * 15)
+        END as efficiency_score
+      FROM vehicles
+      WHERE status != 'MAINTENANCE'
+      ORDER BY efficiency_score DESC
+      LIMIT ${limit}
+    `;
+    return vessels;
+  } catch (error) {
+    console.error('Database Error:', error);
+    throw new Error('Failed to fetch top vessel scores.');
+  }
+}
+
+export async function fetchPerformanceVessels(
+  currentPage = 1,
+  perPage = 5,
+): Promise<{ vessels: PerformanceVessel[]; total: number }> {
+  const offset = (currentPage - 1) * perPage;
+
+  try {
+    const vessels = await sql<PerformanceVessel[]>`
+      SELECT
+        vehicle_name,
+        vehicle_code,
+        CASE
+          WHEN status = 'MAINTENANCE' THEN 40
+          WHEN status = 'EN ROUTE' THEN 90 + (RANDOM() * 10)
+          ELSE 75 + (RANDOM() * 15)
+        END as performance,
+        CASE
+          WHEN status = 'EN ROUTE' THEN 15.0
+          ELSE 0.0
+        END as avg_speed,
+        CASE
+          WHEN status = 'MAINTENANCE' THEN 'LOW'
+          WHEN status = 'EN ROUTE' THEN 'OPTIMAL'
+          ELSE 'STABLE'
+        END as status
+      FROM vehicles
+      ORDER BY performance DESC
+      LIMIT ${perPage} OFFSET ${offset}
+    `;
+
+    const total = await sql<{ count: number }[]>`
+      SELECT COUNT(*)::int as count FROM vehicles
+    `;
+
+    return { vessels, total: total[0]?.count ?? 0 };
+  } catch (error) {
+    console.error('Database Error:', error);
+    throw new Error('Failed to fetch performance vessels.');
+  }
+}
+
+export async function fetchTotalVehicleCount(): Promise<number> {
+  try {
+    const result = await sql<{ count: number }[]>`
+      SELECT COUNT(*)::int as count FROM vehicles
+    `;
+    return result[0]?.count ?? 0;
+  } catch (error) {
+    console.error('Database Error:', error);
+    throw new Error('Failed to fetch total vehicle count.');
   }
 }
 

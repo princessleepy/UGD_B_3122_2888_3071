@@ -1,6 +1,7 @@
 import {
   fetchFilteredVehicles,
   fetchVehiclePages,
+  fetchVehicleStats,
 } from '@/app/lib/data';
 
 import VesselClient from './VesselClient';
@@ -22,8 +23,11 @@ export default async function VesselListPage(props: {
   const currentPage = Number(searchParams?.page) || 1;
   
   // ✅ Fetch data vessels
-  const vehicles = await fetchFilteredVehicles(query, status, currentPage);
-  const totalPages = await fetchVehiclePages(query, status);
+  const [vehicles, totalPages, stats] = await Promise.all([
+    fetchFilteredVehicles(query, status, currentPage),
+    fetchVehiclePages(query, status),
+    fetchVehicleStats(),
+  ]);
   
   // ✅ Generate next vehicle code untuk modal
   const nextVehicleCode = await generateVehicleCode();
@@ -43,6 +47,7 @@ export default async function VesselListPage(props: {
       nextPageUrl={nextPageUrl}
       deleteAction={deleteVehicle}
       nextVehicleCode={nextVehicleCode}
+      readiness={stats.readiness}
     />
   );
 }

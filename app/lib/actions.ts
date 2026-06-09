@@ -1,12 +1,12 @@
 'use server';
 
 import { z } from 'zod';
-import postgres from 'postgres';
+import { sql } from './db';
 import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 import bcrypt from 'bcrypt';
 
-const sql = postgres(process.env.POSTGRES_URL!, { ssl: 'require' });
+
 
 // ✅ TIPE RESPON KONSISTEN UNTUK SEMUA ACTION
 export type ActionResponse = {

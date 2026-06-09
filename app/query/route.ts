@@ -1,12 +1,10 @@
-import postgres from 'postgres';
-
-const sql = postgres(process.env.POSTGRES_URL!, { ssl: 'require' });
+import { sql } from '@/app/lib/db';
 
 async function getVessels() {
   // Query untuk mengambil semua kolom dari tabel vessels
   const data = await sql`
     SELECT * FROM vessels
-    ORDER BY name ASC; 
+    ORDER BY vessel_name ASC; 
   `;
   return data;
 }

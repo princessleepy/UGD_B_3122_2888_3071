@@ -7,8 +7,8 @@ import {
   ExclamationTriangleIcon,
   CloudIcon,
 } from '@heroicons/react/24/outline';
-import { alerts, dashboardStats } from '@/app/lib/placeholder-data';
-import { Vehicle } from '@/app/lib/definitions';
+import { alerts } from '@/app/lib/placeholder-data';
+import { Vehicle, VehicleStats } from '@/app/lib/definitions';
 
 function getStatusColor(status: string) {
   switch (status) {
@@ -20,16 +20,48 @@ function getStatusColor(status: string) {
   }
 }
 
+function buildDashboardStats(stats: VehicleStats) {
+  return [
+    {
+      label: 'VESSELS EN ROUTE',
+      value: String(stats.enRoute).padStart(2, '0'),
+      sub: '+3%',
+      subColor: 'text-emerald-400',
+    },
+    {
+      label: 'IN PORT',
+      value: String(stats.inPort).padStart(2, '0'),
+      sub: 'STABLE',
+      subColor: 'text-gray-600',
+    },
+    {
+      label: 'ANCHORAGE',
+      value: String(stats.anchorage).padStart(2, '0'),
+      sub: 'WAITING',
+      subColor: 'text-amber-500',
+    },
+    {
+      label: 'MAINTENANCE',
+      value: String(stats.maintenance).padStart(2, '0'),
+      sub: 'ALERT',
+      subColor: 'text-rose-500',
+    },
+  ];
+}
+
 export default function DashboardClient({
   vehicles,
+  stats,
 }: {
   vehicles: Vehicle[];
+  stats: VehicleStats;
 }) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
   const totalPages = Math.ceil(vehicles.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedVessels = vehicles.slice(startIndex, startIndex + itemsPerPage);
+  const dashboardStats = buildDashboardStats(stats);
 
   return (
     <div className="min-h-screen bg-[#0d0415] text-white p-6 font-mono">
@@ -250,7 +282,7 @@ export default function DashboardClient({
                 <p className="text-[8px] text-gray-600 uppercase font-black mb-1 tracking-widest">
                   Efficiency Rate
                 </p>
-                <p className="text-xl font-black text-[#bc66ff]">94.2%</p>
+                <p className="text-xl font-black text-[#bc66ff]">{stats.readiness}%</p>
               </div>
               <div className="bg-black/40 p-4 rounded-2xl border border-white/5">
                 <p className="text-[8px] text-gray-600 uppercase font-black mb-1 tracking-widest">

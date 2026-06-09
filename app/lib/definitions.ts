@@ -128,6 +128,39 @@ export type Vehicle = {
   registry_status: string;
   hull_integrity: string;
   created_at: string;
+  updated_at?: string;
 };
 
-export type VehicleForm = Omit<Vehicle, 'created_at'>;
+export type VehicleForm = Omit<Vehicle, 'created_at' | 'updated_at'>;
+
+export type VehicleStats = {
+  total: number;
+  enRoute: number;
+  inPort: number;
+  anchorage: number;
+  maintenance: number;
+  readiness: string;
+};
+
+export type MapVessel = {
+  vehicle_code: string;
+  vehicle_name: string;
+  status: string;
+  velocity: string;
+  heading: string;
+};
+
+export type VesselAuditRow = Vehicle & {
+  fuel_percentage: number;
+  consumption_rate: number;
+  voyage_distance: number;
+  efficiency_score: number;
+};
+
+export type PerformanceVessel = {
+  vehicle_name: string;
+  vehicle_code: string;
+  performance: number;
+  avg_speed: number;
+  status: string;
+};
