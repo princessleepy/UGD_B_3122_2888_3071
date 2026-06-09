@@ -442,6 +442,7 @@ export async function fetchVehicleById(id: string) {
 }
 
 //dashboard
+
 export async function fetchVehicleStats(): Promise<VehicleStats> {
   try {
     const vehicles = await sql<{ status: string }[]>`
@@ -475,10 +476,11 @@ export async function fetchAllVehicles(): Promise<Vehicle[]> {
       SELECT * FROM vehicles ORDER BY vehicle_name
     `;
     return vehicles;
-  } catch (error) {
-    console.error('Error fetching vehicles:', error);
-    return [];
-  }
+    } catch (error) {
+      console.error('Error fetching vehicles:', error);
+      // Propagate error to be handled by the calling component
+      throw new Error('Failed to fetch all vehicles');
+    }
 }
 
 export async function fetchMaintenanceVessels() {
