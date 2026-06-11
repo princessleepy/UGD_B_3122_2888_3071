@@ -1,10 +1,16 @@
 import { generatePageMetadata } from '@/app/lib/metadata';
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 import {
   fetchFilteredShipmentTransactions,
   fetchShipmentTransactionPages,
 } from '@/app/lib/data';
-import { deleteShipmentFormAction } from '@/app/lib/actions'; // ✅ Pakai wrapper function
+import {
+  deleteShipmentFormAction,
+  markShipmentDelayedAction,
+  resolveShipmentDelayedAction,
+  markShipmentDoneAction,
+} from '@/app/lib/actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,27 +24,34 @@ export const metadata = generatePageMetadata({
 export default async function ActiveShipmentsPage(props: {
   searchParams?: Promise<{
     query?: string;
+    status?: string;
     page?: string;
   }>;
 }) {
   const searchParams = await props.searchParams;
   const query = searchParams?.query || '';
+  const status = searchParams?.status || '';
   const currentPage = Number(searchParams?.page) || 1;
 
   const shipments = await fetchFilteredShipmentTransactions(
     query,
+    status,
     currentPage
   );
 
-  const totalPages = await fetchShipmentTransactionPages(query);
+  const totalPages = await fetchShipmentTransactionPages(query, status);
+
+  if (totalPages > 0 && currentPage > totalPages) {
+    notFound();
+  }
 
   const previousPageUrl = `/dashboard/map/shipments?query=${encodeURIComponent(
     query
-  )}&page=${Math.max(currentPage - 1, 1)}`;
+  )}&status=${encodeURIComponent(status)}&page=${Math.max(currentPage - 1, 1)}`;
 
   const nextPageUrl = `/dashboard/map/shipments?query=${encodeURIComponent(
     query
-  )}&page=${Math.min(currentPage + 1, totalPages || 1)}`;
+  )}&status=${encodeURIComponent(status)}&page=${Math.min(currentPage + 1, totalPages || 1)}`;
 
   return (
     <div className="min-h-screen bg-[#0a0514] text-white font-mono p-8 pt-4 space-y-8">
@@ -73,33 +86,29 @@ export default async function ActiveShipmentsPage(props: {
         </div>
       </div>
 
-      <form className="flex justify-between items-center px-4 gap-4">
-        <div className="relative w-full max-w-md">
+      <form className="flex items-center gap-4 w-full max-w-2xl">
+        {/* Container Input Search */}
+        <div className="relative flex-grow">
           <input
             name="query"
             type="text"
             placeholder="SEARCH TRACKING NO / SENDER / RECEIVER / ITEM..."
             defaultValue={query}
-            className="bg-[#150e24] border border-white/10 rounded-full py-2.5 px-10 text-[9px] font-bold w-full focus:border-[#bc66ff] transition-all outline-none"
+            className="bg-[#150e24] border border-white/10 rounded-full py-3 px-10 text-[9px] font-bold w-full focus:border-[#bc66ff] transition-all outline-none"
           />
-
-          <span className="absolute left-4 top-3 text-gray-600">
+          <span className="absolute left-4 top-3.5 text-gray-600">
             🔍
           </span>
         </div>
 
+        {/* Tombol Search */}
         <button
           type="submit"
-          className="bg-white/5 border border-white/10 px-6 py-3 rounded-full text-[9px] font-black uppercase tracking-[0.2em] hover:bg-white hover:text-black transition-all"
+          className="bg-white/5 border border-white/10 px-8 py-3 rounded-full text-[9px] font-black uppercase tracking-[0.2em] hover:bg-white hover:text-black transition-all shrink-0"
         >
           Search
         </button>
-
-        <span className="text-[9px] text-gray-600 font-bold uppercase tracking-[0.2em]">
-          Page {currentPage} / {totalPages || 1}
-        </span>
       </form>
-
       <div className="bg-[#150e24]/40 border border-white/5 rounded-[2.5rem] overflow-hidden shadow-2xl backdrop-blur-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-[10px]">
@@ -176,7 +185,9 @@ export default async function ActiveShipmentsPage(props: {
                           ? 'text-rose-500 border-rose-500/30 bg-rose-500/5'
                           : shipment.shipment_status === 'ARRIVED'
                             ? 'text-indigo-400 border-indigo-400/30 bg-indigo-400/5'
-                            : 'text-emerald-400 border-emerald-400/30 bg-emerald-400/5'
+                            : shipment.shipment_status === 'DONE'
+                              ? 'text-gray-400 border-white/10 bg-white/5'
+                              : 'text-emerald-400 border-emerald-400/30 bg-emerald-400/5'
                       }`}
                     >
                       {shipment.shipment_status}
@@ -184,28 +195,100 @@ export default async function ActiveShipmentsPage(props: {
                   </td>
 
                   <td className="px-8 py-5 text-right">
-                    <div className="flex justify-end gap-3">
-                      <Link
-                        href={`/dashboard/map/shipments/${shipment.id}/edit`}
-                        className="text-[#bc66ff] hover:text-white font-black uppercase"
-                      >
-                        Edit
-                      </Link>
+                    <div className="flex justify-end gap-3 items-center">
+                      {shipment.shipment_status === 'PENDING' && (
+                        <>
+                          <Link
+                            href={`/dashboard/map/shipments/${shipment.id}/edit`}
+                            className="text-[#bc66ff] hover:text-white font-black uppercase"
+                          >
+                            Edit
+                          </Link>
+                          <form
+                            action={async () => {
+                              'use server';
+                              await deleteShipmentFormAction(shipment.id);
+                            }}
+                          >
+                            <button
+                              type="submit"
+                              className="text-rose-500 hover:text-white font-black uppercase"
+                            >
+                              Delete
+                            </button>
+                          </form>
+                        </>
+                      )}
 
-                      {/* ✅ FORM DELETE: Pakai wrapper function + wrap dengan async */}
-                      <form
-                        action={async () => {
-                          'use server';
-                          await deleteShipmentFormAction(shipment.id);
-                        }}
-                      >
-                        <button
-                          type="submit"
-                          className="text-rose-500 hover:text-white font-black uppercase"
+                      {shipment.shipment_status === 'ON ROUTE' && (
+                        <>
+                          <Link
+                            href={`/dashboard/map/shipments/${shipment.id}/edit`}
+                            className="text-[#bc66ff] hover:text-white font-black uppercase"
+                          >
+                            Edit
+                          </Link>
+                          <form
+                            action={async () => {
+                              'use server';
+                              await markShipmentDelayedAction(shipment.id);
+                            }}
+                          >
+                            <button
+                              type="submit"
+                              className="text-amber-500 hover:text-white font-black uppercase"
+                            >
+                              Mark Delayed
+                            </button>
+                          </form>
+                        </>
+                      )}
+
+                      {shipment.shipment_status === 'DELAYED' && (
+                        <>
+                          <Link
+                            href={`/dashboard/map/shipments/${shipment.id}/edit`}
+                            className="text-[#bc66ff] hover:text-white font-black uppercase"
+                          >
+                            Edit
+                          </Link>
+                          <form
+                            action={async () => {
+                              'use server';
+                              await resolveShipmentDelayedAction(shipment.id);
+                            }}
+                          >
+                            <button
+                              type="submit"
+                              className="text-emerald-400 hover:text-white font-black uppercase"
+                            >
+                              Resolve
+                            </button>
+                          </form>
+                        </>
+                      )}
+
+                      {shipment.shipment_status === 'ARRIVED' && (
+                        <form
+                          action={async () => {
+                            'use server';
+                            await markShipmentDoneAction(shipment.id);
+                          }}
                         >
-                          Delete
-                        </button>
-                      </form>
+                          <button
+                            type="submit"
+                            className="text-indigo-400 hover:text-white font-black uppercase"
+                          >
+                            Done
+                          </button>
+                        </form>
+                      )}
+
+                      {shipment.shipment_status === 'DONE' && (
+                        <span className="text-gray-500 font-bold uppercase tracking-wider">
+                          Completed
+                        </span>
+                      )}
                     </div>
                   </td>
                 </tr>

@@ -2,25 +2,31 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-  const isLoggedIn = request.cookies.get('isLoggedIn')?.value === 'true';
-  const userRole = request.cookies.get('userRole')?.value; // ✅ Ambil role dari cookie
+  const hasSession = request.cookies.has('session');
   const pathname = request.nextUrl.pathname;
 
-  // Public routes (tidak perlu login)
-  const publicRoutes = ['/', '/login'];
-  if (publicRoutes.includes(pathname)) {
+  // Jika user akses /login tapi sudah login -> redirect ke /dashboard
+  if (pathname === '/login') {
+    if (hasSession) {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
     return NextResponse.next();
   }
 
-  // Protected routes: harus login dulu
-  if (!isLoggedIn) {
-    return NextResponse.redirect(new URL(`/login?callbackUrl=${pathname}`, request.url));
+  // Jika user akses /dashboard tanpa session -> redirect ke /login
+  if (pathname.startsWith('/dashboard')) {
+    if (!hasSession) {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
   }
 
-  // ✅ Admin-only routes: cek role
+  // Admin-only routes: cek role
   if (pathname.startsWith('/admin')) {
+    if (!hasSession) {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+    const userRole = request.cookies.get('userRole')?.value;
     if (userRole !== 'admin') {
-      // Operator coba akses /admin → redirect ke dashboard dengan error
       return NextResponse.redirect(new URL('/dashboard?error=unauthorized', request.url));
     }
   }

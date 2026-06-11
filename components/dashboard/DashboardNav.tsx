@@ -3,6 +3,7 @@
 import React, { useState, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { logout } from '@/app/actions/logout';
 
 interface SubMenu {
   name: string;
@@ -71,13 +72,8 @@ export default function DashboardNav() {
     return pathname.startsWith(item.path);
   };
 
-  const handleConfirmLogout = () => {
-    document.cookie =
-      'isLoggedIn=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-    document.cookie =
-      'role=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-
-    router.push('/login');
+  const handleConfirmLogout = async () => {
+    await logout();
   };
 
   return (

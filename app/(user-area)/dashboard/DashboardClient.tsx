@@ -1,14 +1,16 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   MagnifyingGlassIcon,
   ExclamationTriangleIcon,
   CloudIcon,
 } from '@heroicons/react/24/outline';
 import { alerts } from '@/app/lib/placeholder-data';
-import { Vehicle, VehicleStats } from '@/app/lib/definitions';
+import { Vehicle } from '@/app/lib/definitions';
+import { validateSession } from '@/app/lib/actions';
 
 function getStatusColor(status: string) {
   switch (status) {
@@ -20,53 +22,48 @@ function getStatusColor(status: string) {
   }
 }
 
-function buildDashboardStats(stats: VehicleStats) {
-  return [
-    {
-      label: 'VESSELS EN ROUTE',
-      value: String(stats.enRoute).padStart(2, '0'),
-      sub: '+3%',
-      subColor: 'text-emerald-400',
-    },
-    {
-      label: 'IN PORT',
-      value: String(stats.inPort).padStart(2, '0'),
-      sub: 'STABLE',
-      subColor: 'text-gray-600',
-    },
-    {
-      label: 'ANCHORAGE',
-      value: String(stats.anchorage).padStart(2, '0'),
-      sub: 'WAITING',
-      subColor: 'text-amber-500',
-    },
-    {
-      label: 'MAINTENANCE',
-      value: String(stats.maintenance).padStart(2, '0'),
-      sub: 'ALERT',
-      subColor: 'text-rose-500',
-    },
-  ];
-}
-
 export default function DashboardClient({
   vehicles,
   stats,
 }: {
   vehicles: Vehicle[];
-  stats: VehicleStats;
+  stats: {
+    total: number;
+    en_route: number;
+    maintenance: number;
+    in_port: number;
+    anchorage: number;
+    readiness: number;
+  };
 }) {
+  const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
   const totalPages = Math.ceil(vehicles.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedVessels = vehicles.slice(startIndex, startIndex + itemsPerPage);
-  const dashboardStats = buildDashboardStats(stats);
+  const dashboardStats = useMemo(() => ([
+    { label: 'Total Vessels',  value: stats.total,       sub: 'UNITS',   subColor: 'text-[#bc66ff]'   },
+    { label: 'En Route',       value: stats.en_route,    sub: 'ACTIVE',  subColor: 'text-emerald-500' },
+    { label: 'In Port',        value: stats.in_port,     sub: 'DOCKED',  subColor: 'text-indigo-500'  },
+    { label: 'Anchorage',      value: stats.anchorage,   sub: 'WAITING', subColor: 'text-amber-500'   },
+    { label: 'Maintenance',    value: stats.maintenance, sub: 'SERVICE', subColor: 'text-rose-500'     },
+    { label: 'Fleet Readiness',value: `${stats.readiness}%`, sub: 'READY', subColor: 'text-emerald-400' },
+  ]), [stats]);
+
+  useEffect(() => {
+    validateSession().then((result) => {
+      if (!result.success) {
+        router.replace('/login');
+        router.refresh();
+      }
+    });
+  }, [router]);
 
   return (
     <div className="min-h-screen bg-[#0d0415] text-white p-6 font-mono">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
         {dashboardStats.map((stat, i) => (
           <div
             key={i}
@@ -76,7 +73,7 @@ export default function DashboardClient({
               {stat.label}
             </p>
             <div className="flex items-baseline gap-2">
-              <span className={`text-2xl font-black ${i === 0 ? 'text-[#bc66ff]' : 'text-white'}`}>
+              <span className={`text-2xl font-black ${stat.subColor}`}>
                 {stat.value}
               </span>
               <span className={`text-[9px] font-bold tracking-tighter ${stat.subColor}`}>
@@ -282,7 +279,7 @@ export default function DashboardClient({
                 <p className="text-[8px] text-gray-600 uppercase font-black mb-1 tracking-widest">
                   Efficiency Rate
                 </p>
-                <p className="text-xl font-black text-[#bc66ff]">{stats.readiness}%</p>
+                <p className="text-xl font-black text-[#bc66ff]">94.2%</p>
               </div>
               <div className="bg-black/40 p-4 rounded-2xl border border-white/5">
                 <p className="text-[8px] text-gray-600 uppercase font-black mb-1 tracking-widest">

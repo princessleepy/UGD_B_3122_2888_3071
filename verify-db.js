@@ -11,13 +11,10 @@ async function run() {
     `;
     console.log('Tables in NEW database:', tables.map(t => t.table_name));
 
-    // Check row counts
-    for (let t of tables) {
-      const count = await sql.unsafe(`SELECT COUNT(*) as c FROM "${t.table_name}"`);
-      console.log(`  ${t.table_name}: ${count[0].c} rows`);
-    }
+    const operators = await sql`SELECT * FROM port_operators LIMIT 1`;
+    console.log('port_operators row:', operators[0]);
   } catch (err) {
-    console.error('Error:', err.message);
+    console.error('Error:', err);
   } finally {
     process.exit(0);
   }

@@ -1,4 +1,4 @@
-import { Revenue, VehicleStats } from './definitions';
+import { Revenue } from './definitions';
 
 export const formatCurrency = (amount: number) => {
   return (amount / 100).toLocaleString('en-US', {
@@ -34,73 +34,6 @@ export const generateYAxis = (revenue: Revenue[]) => {
 
   return { yAxisLabels, topLabel };
 };
-
-export function timeAgo(date: Date | string): string {
-  const now = new Date();
-  const then = new Date(date);
-  const seconds = Math.floor((now.getTime() - then.getTime()) / 1000);
-
-  const intervals: Record<string, number> = {
-    year: 31536000,
-    month: 2592000,
-    week: 604800,
-    day: 86400,
-    hour: 3600,
-    minute: 60,
-  };
-
-  for (const [unit, secondsInUnit] of Object.entries(intervals)) {
-    const interval = Math.floor(seconds / secondsInUnit);
-    if (interval >= 1) {
-      return `${interval}${unit[0]} ago`;
-    }
-  }
-
-  return 'Just now';
-}
-
-export function generateTrackingNumber(): string {
-  const date = new Date();
-  const year = date.getFullYear();
-  const random = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
-  return `STN-${year}-${random}`;
-}
-
-function hashCode(str: string): number {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return Math.abs(hash);
-}
-
-export function buildStatusDistribution(stats: VehicleStats) {
-  return {
-    active: stats.enRoute + stats.inPort,
-    critical: stats.maintenance,
-    planned: stats.anchorage,
-  };
-}
-
-export function getVehicleLocation(status: string): string {
-  if (status === 'EN ROUTE') return 'SINGAPORE [SIN]';
-  if (status === 'IN PORT') return 'JAKARTA [JKT]';
-  if (status === 'ANCHORAGE') return 'ANCHORAGE ZONE';
-  return 'MAINTENANCE DOCK';
-}
-
-export function getVehicleEta(status: string): string {
-  return status === 'EN ROUTE' ? '2024.05.22 / 14:30' : '---';
-}
-
-export function getMockEfficiency(status: string, seed?: string): number {
-  const base =
-    status === 'MAINTENANCE' ? 40 : status === 'EN ROUTE' ? 90 : 75;
-  if (seed) {
-    return Math.round(base + (hashCode(seed) % 15));
-  }
-  return base;
-}
 
 export const generatePagination = (currentPage: number, totalPages: number) => {
   // If the total number of pages is 7 or less,
