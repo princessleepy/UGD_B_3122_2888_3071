@@ -23,6 +23,7 @@ function getStatusColor(status: string) {
 export default function DashboardClient({
   vehicles,
   stats,
+  dbError = false,
 }: {
   vehicles: Vehicle[];
   stats: {
@@ -33,6 +34,7 @@ export default function DashboardClient({
     anchorage: number;
     readiness: number;
   };
+  dbError?: boolean;
 }) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
@@ -50,6 +52,18 @@ export default function DashboardClient({
 
   return (
     <div className="min-h-screen bg-[#0d0415] text-white p-6 font-mono">
+      {/* DB Error Banner */}
+      {dbError && (
+        <div className="mb-6 p-4 bg-rose-500/10 border border-rose-500/30 rounded-2xl flex items-center gap-3">
+          <ExclamationTriangleIcon className="w-5 h-5 text-rose-400 shrink-0" />
+          <div>
+            <p className="text-[11px] font-black text-rose-400 uppercase tracking-wider">Koneksi Database Gagal</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">
+              Data tidak dapat dimuat. Pastikan environment variables sudah diset di Vercel (POSTGRES_URL / DATABASE_URL).
+            </p>
+          </div>
+        </div>
+      )}
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
         {dashboardStats.map((stat, i) => (

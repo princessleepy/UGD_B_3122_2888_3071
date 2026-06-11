@@ -13,8 +13,32 @@ if (!rawUrl) {
   throw new Error('Database connection string is not defined in environment variables');
 }
 
-// Strip channel_binding — not supported by postgres.js driver
-const connectionString = rawUrl.replace(/[?&]channel_binding=[^&]*/g, '').replace(/\?$/, '');
+/**
+ * Safely remove the `channel_binding` parameter from the Neon connection URL.
+ * The URL API is used to avoid broken query strings (e.g., when channel_binding
+ * is the first param: "?channel_binding=x&sslmode=require" → naive regex would
+ * produce "&sslmode=require" without a leading "?" which postgres.js then
+ * incorrectly includes in the database name).
+ */
+function cleanConnectionUrl(rawUrl: string): string {
+  try {
+    // postgres:// is not a recognized protocol by the URL constructor, swap it temporarily
+    const normalized = rawUrl.replace(/^postgres(ql)?:\/\//, 'https://');
+    const url = new URL(normalized);
+    url.searchParams.delete('channel_binding');
+    // Restore original protocol
+    return url.toString().replace(/^https:\/\//, rawUrl.match(/^(postgres(?:ql)?):\/\//)?.[1] === 'postgresql' ? 'postgresql://' : 'postgres://');
+  } catch {
+    // Fallback: regex strip — fix dangling & after removal
+    return rawUrl
+      .replace(/[?&]channel_binding=[^&]*/g, '')
+      .replace(/\?$/, '')
+      .replace(/\?&/, '?')   // fix: "?&remaining" → "?remaining"
+      .replace(/&&/g, '&');  // fix: "&&" → "&"
+  }
+}
+
+const connectionString = cleanConnectionUrl(rawUrl);
 
 // Pooler endpoints use PgBouncer — disable prepared statements to avoid protocol errors
 const isPooler = connectionString.includes('-pooler');
