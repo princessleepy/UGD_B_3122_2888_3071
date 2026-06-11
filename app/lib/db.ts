@@ -21,10 +21,11 @@ const isPooler = connectionString.includes('-pooler');
 
 export const sql = globalForDb.conn ?? postgres(connectionString, {
   ssl: 'require',
-  max: 1,           // Neon free tier: keep connections minimal
-  idle_timeout: 20,
-  connect_timeout: 15,
+  max: 3,           // Allow a few connections for concurrent requests
+  idle_timeout: 30,
+  connect_timeout: 30,
   prepare: !isPooler, // Must be false for PgBouncer/pooler
 });
 
-if (process.env.NODE_ENV !== 'production') globalForDb.conn = sql;
+// Cache connection globally in ALL environments to avoid exhausting connections on Vercel
+globalForDb.conn = sql;
