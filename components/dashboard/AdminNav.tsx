@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { BellIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
 import { useState } from 'react';
+import { logout } from '@/app/actions/logout';
 
 export default function AdminNavbar() {
   const pathname = usePathname();
@@ -21,8 +22,8 @@ export default function AdminNavbar() {
     return pathname.startsWith(href);
   };
 
-  const handleLogout = () => {
-    router.push('/login');
+  const handleLogout = async () => {
+    await logout();
   };
 
   return (

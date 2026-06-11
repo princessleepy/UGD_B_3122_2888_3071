@@ -1,10 +1,10 @@
 import {
   fetchFilteredVehicles,
   fetchVehiclePages,
-  fetchVehicleStats,
 } from '@/app/lib/data';
 
 import VesselClient from './VesselClient';
+import { fetchCargoTypesAction, fetchAllVehiclesAction } from '@/app/lib/actions';
 // ✅ PERBAIKAN: Gunakan deleteVehicle (alias), bukan deleteVessel
 import { generateVehicleCode, deleteVehicle } from '@/app/lib/actions';
 
@@ -23,14 +23,13 @@ export default async function VesselListPage(props: {
   const currentPage = Number(searchParams?.page) || 1;
   
   // ✅ Fetch data vessels
-  const [vehicles, totalPages, stats] = await Promise.all([
-    fetchFilteredVehicles(query, status, currentPage),
-    fetchVehiclePages(query, status),
-    fetchVehicleStats(),
-  ]);
+  const vehicles = await fetchFilteredVehicles(query, status, currentPage);
+  const totalPages = await fetchVehiclePages(query, status);
   
   // ✅ Generate next vehicle code untuk modal
   const nextVehicleCode = await generateVehicleCode();
+// Di dalam page.tsx / Halaman Utama Vessel
+  const cargoTypes = await fetchCargoTypesAction();
   
   // ✅ Pagination URLs
   const previousPageUrl = `/dashboard/fleet/vessels?query=${encodeURIComponent(query)}&status=${encodeURIComponent(status)}&page=${Math.max(currentPage - 1, 1)}`;
@@ -47,7 +46,7 @@ export default async function VesselListPage(props: {
       nextPageUrl={nextPageUrl}
       deleteAction={deleteVehicle}
       nextVehicleCode={nextVehicleCode}
-      readiness={stats.readiness}
+      cargoTypes={cargoTypes}
     />
   );
 }
