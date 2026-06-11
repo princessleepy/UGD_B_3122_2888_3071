@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import {
   MagnifyingGlassIcon,
   ExclamationTriangleIcon,
@@ -10,7 +9,6 @@ import {
 } from '@heroicons/react/24/outline';
 import { alerts } from '@/app/lib/placeholder-data';
 import { Vehicle } from '@/app/lib/definitions';
-import { validateSession } from '@/app/lib/actions';
 
 function getStatusColor(status: string) {
   switch (status) {
@@ -36,7 +34,6 @@ export default function DashboardClient({
     readiness: number;
   };
 }) {
-  const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
   const totalPages = Math.ceil(vehicles.length / itemsPerPage);
@@ -50,15 +47,6 @@ export default function DashboardClient({
     { label: 'Maintenance',    value: stats.maintenance, sub: 'SERVICE', subColor: 'text-rose-500'     },
     { label: 'Fleet Readiness',value: `${stats.readiness}%`, sub: 'READY', subColor: 'text-emerald-400' },
   ]), [stats]);
-
-  useEffect(() => {
-    validateSession().then((result) => {
-      if (!result.success) {
-        router.replace('/login');
-        router.refresh();
-      }
-    });
-  }, [router]);
 
   return (
     <div className="min-h-screen bg-[#0d0415] text-white p-6 font-mono">
